@@ -95,16 +95,20 @@ class CueEngine {
     if (!this.userInteracted) return;
     const audio = this.cues[cueNum];
     if (!audio) return;
-    if (!audio.paused) return; // Don't fade in on top of already-playing cue
     const target = this.masterVolume * targetScale;
+    if (!audio.paused && audio.volume > 0.01) return;
+    if (audio.paused) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+    const startVol = audio.volume;
     const start = Date.now();
     const t = setInterval(() => {
       const p = Math.min((Date.now() - start) / 1000 / durationSec, 1);
-      audio.volume = target * p;
+      audio.volume = startVol + (target - startVol) * p;
       if (p >= 1) { clearInterval(t); this.removeTimer(t); }
     }, FADE_INTERVAL_MS);
     this.addTimer(t);
-    audio.play().catch(() => {});
     this.activeCue = cueNum;
   }
 
