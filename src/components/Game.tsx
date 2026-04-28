@@ -183,7 +183,7 @@ function resolveCallbackNode(choiceId: string, defaultNext: string): string {
 // ============================================================================
 const TITLE_DELAY_MS = 2000;
 const CHOICE_ADVANCE_MS = 500;
-const BUSY_LOCK_MS = 50;
+const BUSY_LOCK_MS = 400;
 
 export default function Game() {
   const [nodes, setNodes] = useState<GameNode[]>([]);
