@@ -439,20 +439,12 @@ export const gameNodes: Record<string, GameNode> = {
       },
     ],
     audio: { action: 'fade-out', cue: 3, duration: 3 },
-    next: 'post_choice3',
+    next: 'act1_end',
   },
 
   // ========================================================================
   // POST-CHOICE 3 CALLBACK BRANCHES
   // ========================================================================
-  post_choice3: {
-    id: 'post_choice3',
-    text: '',
-    type: 'narration',
-    // This is a router node — it evaluates conditions and picks the next node
-    next: 'act1_end',
-  },
-
   // Callback 1: Choice 3A path — Lu Yuan hesitation reference (if A1 or C1)
   callback_3a_lu: {
     id: 'callback_3a_lu',
@@ -495,19 +487,4 @@ export const gameNodes: Record<string, GameNode> = {
     type: 'ending',
     image: { src: IMG.ending, transition: 'crossfade', duration: 2 },
   },
-};
-
-// ============================================================================
-// CHOICE PATH BRANCH MAPPING
-// ============================================================================
-
-export interface ChoiceBranch {
-  choiceId?: string;
-  callbackNodeId?: string;
-}
-
-export const choiceBranches: Record<string, ChoiceBranch> = {
-  '3A': { callbackNodeId: 'callback_3a_lu' },
-  '3B': { callbackNodeId: 'callback_3b_liu' },
-  '3C': { callbackNodeId: 'callback_3c_too_many' },
 };
