@@ -293,7 +293,10 @@ export default function Game() {
       narrRef.current.stop();
       setNarrationActive(false);
       const node = gameNodes[curNodeRef.current];
-      if (node?.next) advance(node.next);
+      if (node?.next) {
+        busyRef.current = false;
+        advance(node.next);
+      }
       return;
     }
 
