@@ -9,6 +9,7 @@ const FADE_INTERVAL_MS = 50;
 
 class CueEngine {
   cues: Record<number, HTMLAudioElement> = {};
+  cueScales: Record<number, number> = { 1: 1.0, 2: 1.0, 3: 1.0 };
   activeCue = 0;
   masterVolume = 0.8;
   userInteracted = false;
@@ -49,6 +50,7 @@ class CueEngine {
     if (!this.userInteracted) return;
     const audio = this.cues[cueNum];
     if (!audio) return;
+    this.cueScales[cueNum] = 1.0;
     audio.currentTime = 0;
     if (fadeSec > 0) {
       audio.volume = 0;
@@ -95,6 +97,7 @@ class CueEngine {
     if (!this.userInteracted) return;
     const audio = this.cues[cueNum];
     if (!audio) return;
+    this.cueScales[cueNum] = targetScale;
     const target = this.masterVolume * targetScale;
     if (!audio.paused && audio.volume > 0.01) return;
     if (audio.paused) {
@@ -114,8 +117,11 @@ class CueEngine {
 
   setVolume(v: number) {
     this.masterVolume = Math.max(0, Math.min(1, v));
-    Object.values(this.cues).forEach((a) => {
-      if (!a.paused && a.volume > 0) a.volume = this.masterVolume;
+    Object.entries(this.cues).forEach(([numStr, a]) => {
+      const num = Number(numStr);
+      if (!a.paused && a.volume > 0) {
+        a.volume = this.masterVolume * (this.cueScales[num] ?? 1.0);
+      }
     });
   }
 
