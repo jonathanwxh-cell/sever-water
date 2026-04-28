@@ -197,16 +197,9 @@ export const gameNodes: Record<string, GameNode> = {
 
   s2_opening: {
     id: 's2_opening',
-    text: 'You accounted for three.',
+    text: 'You accounted for three.\n\nYou did not account for the fourth. He comes from above, where the gorge walls narrow to a strip of grey sky. The blade aimed at your exposed back. You know with the clarity of ten thousand forms that you cannot turn in time.',
     type: 'narration',
     narrationAudio: NAR.s2_three,
-    next: 's2_fourth_man',
-  },
-
-  s2_fourth_man: {
-    id: 's2_fourth_man',
-    text: 'You did not account for the fourth. He comes from above, where the gorge walls narrow to a strip of grey sky. The blade aimed at your exposed back. You know with the clarity of ten thousand forms that you cannot turn in time.',
-    type: 'narration',
     next: 's2_bell',
   },
 
@@ -341,16 +334,9 @@ export const gameNodes: Record<string, GameNode> = {
 
   s3_liu_sleeps: {
     id: 's3_liu_sleeps',
-    text: 'Liu Ruyan sleeps now. The wound is not deep but it is long. She spoke little on the road, but what she said you remember:',
+    text: 'Liu Ruyan sleeps now. The wound is not deep but it is long. She spoke little on the road, but what she said you remember:\n\nThe letter is a warning. Someone is hunting a technique — a killing art that your teacher\'s generation thought buried. Your teacher learned that it had resurfaced. He wrote to the one person who might know where.',
     type: 'narration',
     narrationAudio: NAR.s3_reflection,
-    next: 's3_letter_warning',
-  },
-
-  s3_letter_warning: {
-    id: 's3_letter_warning',
-    text: 'The letter is a warning. Someone is hunting a technique — a killing art that your teacher\'s generation thought buried. Your teacher learned that it had resurfaced. He wrote to the one person who might know where.',
-    type: 'narration',
     next: 's3_he_didnt',
   },
 
@@ -372,17 +358,10 @@ export const gameNodes: Record<string, GameNode> = {
 
   s3_courtyard: {
     id: 's3_courtyard',
-    text: 'In the courtyard below, a horse. A rider dismounts.',
+    text: 'In the courtyard below, a horse. A rider dismounts.\n\nThe voice that calls out belongs to someone you have known since you were both children trading sword-forms in the snow. 陆远 — Lu Yuan. Junior Disciple Lu. But he does not sound like a child now.',
     type: 'narration',
     narrationAudio: NAR.s3_lu,
     image: { src: IMG.lu_arrival, transition: 'crossfade', duration: 2 },
-    next: 's3_voice',
-  },
-
-  s3_voice: {
-    id: 's3_voice',
-    text: 'The voice that calls out belongs to someone you have known since you were both children trading sword-forms in the snow. 陆远 — Lu Yuan. Junior Disciple Lu. But he does not sound like a child now.',
-    type: 'narration',
     next: 's3_senior_shen',
   },
 
