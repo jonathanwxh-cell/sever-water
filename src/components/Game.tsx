@@ -251,7 +251,6 @@ export default function Game() {
     const node = gameNodes[nodeId];
     if (!node) return;
 
-    busyRef.current = true;
     curNodeRef.current = nodeId;
 
     if (node.type === 'scene-heading' || node.type === 'title') {
@@ -329,7 +328,6 @@ export default function Game() {
     const currentNode = gameNodes[curNodeRef.current];
     const nextId = currentNode.next || 'act1_end';
 
-    busyRef.current = true;
     setTimeout(() => { advance(resolveCallbackNode(choiceId, nextId)); }, CHOICE_ADVANCE_MS);
   }, [choiceOptions, advance]);
 
