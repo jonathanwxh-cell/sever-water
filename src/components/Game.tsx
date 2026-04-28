@@ -192,7 +192,9 @@ export default function Game() {
   const [showChoices, setShowChoices] = useState(false);
   const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]);
   const [choicePrompt, setChoicePrompt] = useState('');
-  const [currentImg, setCurrentImg] = useState<string | null>(null);
+  const [currentImg, setCurrentImg] = useState<string | null>(
+    '/assets/images/b1_08_style_anchor_moon.png'
+  );
   const [prevImg, setPrevImg] = useState<string | null>(null);
   const [prevImgFading, setPrevImgFading] = useState(false);
   const [narrationActive, setNarrationActive] = useState(false);
