@@ -83,3 +83,50 @@ export function getLiuRuyanOneOfThoseIntonation(): "recognition" | "flat" {
 export function shouldRenderTooManyQuestions(): boolean {
   return flags.C3 && flags.C2;
 }
+
+// ============================================================================
+// Persistence — autosave at scene boundaries
+// ============================================================================
+const SAVE_KEY = 'sever_water_act1_save';
+
+export interface SaveData {
+  heartState: HeartState;
+  flags: Flags;
+  currentNodeId: string;
+  timestamp: number;
+}
+
+export function saveProgress(currentNodeId: string): void {
+  try {
+    const data: SaveData = {
+      heartState: { ...heartState },
+      flags: { ...flags },
+      currentNodeId,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch {
+    // localStorage may be disabled — silently ignore
+  }
+}
+
+export function loadProgress(): SaveData | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as SaveData;
+    Object.assign(heartState, data.heartState);
+    Object.assign(flags, data.flags);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function clearProgress(): void {
+  try {
+    localStorage.removeItem(SAVE_KEY);
+  } catch {
+    // ignore
+  }
+}

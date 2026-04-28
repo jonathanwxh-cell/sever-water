@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { gameNodes, type GameNode, type ChoiceOption } from '../data';
-import { applyChoice, shouldRenderLuYuanHesitationCallback, shouldRenderTooManyQuestions, getLiuRuyanOneOfThoseIntonation, resetState } from '../state';
+import { applyChoice, shouldRenderLuYuanHesitationCallback, shouldRenderTooManyQuestions, getLiuRuyanOneOfThoseIntonation, resetState, saveProgress, loadProgress, clearProgress } from '../state';
 
 // ============================================================================
 // AUDIO ENGINE — Cue music management
@@ -246,6 +246,10 @@ export default function Game() {
     busyRef.current = true;
     curNodeRef.current = nodeId;
 
+    if (node.type === 'scene-heading' || node.type === 'title') {
+      saveProgress(nodeId);
+    }
+
     if (node.type === 'ending') setPhase('ended');
     else if (node.type !== 'title') setPhase('playing');
 
@@ -324,6 +328,7 @@ export default function Game() {
   // RESTART
   const handleRestart = useCallback(() => {
     resetState();
+    clearProgress();
     cueRef.current.stopAll();
     narrRef.current.stop();
     setNodes([]);
@@ -384,8 +389,17 @@ export default function Game() {
 
   // INIT
   useEffect(() => {
-    const t = gameNodes['title'];
-    if (t.image) setCurrentImg(t.image.src);
+    const save = loadProgress();
+    if (save && save.currentNodeId !== 'title') {
+      curNodeRef.current = save.currentNodeId;
+      setPhase('playing');
+      cueRef.current.markInteracted();
+      advance(save.currentNodeId);
+    } else {
+      const t = gameNodes['title'];
+      if (t.image) setCurrentImg(t.image.src);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // RENDER

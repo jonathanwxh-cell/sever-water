@@ -2,7 +2,6 @@
   "name": "sever-water",
   "private": true,
   "version": "0.1.0",
-  "description": "Sever Water (断水) — A cinematic interactive fiction game built with React, TypeScript, and Tailwind CSS",,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
