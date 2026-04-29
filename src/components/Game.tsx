@@ -408,23 +408,37 @@ export default function Game() {
   const handleReturnToTitle = useCallback(() => {
     narrRef.current.stop();
     setNarrationActive(false);
-    if (cueRef.current.activeCue !== 0) {
-      cueRef.current.fadeOutCue(cueRef.current.activeCue, 2);
+
+    const activeCue = cueRef.current.activeCue;
+    if (activeCue && activeCue !== 1) {
+      cueRef.current.fadeOutCue(activeCue, 2);
+      setTimeout(() => {
+        cueRef.current.playCue(1, 2);
+      }, 1500);
+    } else if (activeCue === 0) {
+      cueRef.current.playCue(1, 2);
     }
+
     setPhase('title');
     setTitleFade(false);
     setShowChoices(false);
     setChoiceOptions([]);
     setChoicePrompt('');
-    setCurrentImg(null);
-    setPrevImg(null);
-    setPrevImgFading(false);
     setSceneMeta({});
+
+    const t = gameNodes['title'];
+    if (t.image) {
+      setPrevImg(currentImg);
+      setCurrentImg(t.image.src);
+      requestAnimationFrame(() => setPrevImgFading(true));
+      setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, 1000);
+    }
+
     curNodeRef.current = 'title';
     advancingRef.current = false;
     choiceLockedRef.current = false;
     setHasSave(true);
-  }, [currentImg, hasSave, setHasSave]);
+  }, [currentImg]);
 
   // KEYBOARD
   useEffect(() => {
