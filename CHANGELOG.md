@@ -8,17 +8,25 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) loosely, with
 
 ## [Unreleased]
 
-*Add entries here as work progresses. Promote to a versioned section when tagging a release.*
+### Fixed
 
-### Added
+- **Narration audio bleeding into the next screen.** Several latent races in `NarrationEngine` could leave a previous narration audible after the player advanced — most reliably reproduced on iOS Safari, sporadic on desktop. Three reinforcing changes:
+  1. **Generation-counter guard.** Each `play()` captures a `gen` id; `stop()` and the next `play()` both bump it. Pending `ended`/`error`/play-rejection callbacks check the captured gen and become no-ops once superseded. The previous `if (this.audio === a)` guard worked in the common case but was fragile across overlapping stop/play cycles.
+  2. **Detach handlers before tearing down.** `stop()` now nulls `onended`/`onerror` *before* `pause()` + `removeAttribute('src')` + `load()`, eliminating the synthetic `error` event that the old buffer-release sequence triggered. Also adds `currentTime = 0` so the element is fully reset.
+  3. **Assign `this.audio` before `play()`.** Previously the assignment came after the `play()` promise was constructed, so a synchronous rejection (rare but observed on some browsers under autoplay-policy edge cases) hit the catch handler with a stale `this.audio` and skipped cleanup.
 
 ### Changed
 
-### Fixed
-
-### Removed
+- **`useLazyRef` for engine refs.** `useRef(new CueEngine())` and `useRef(new NarrationEngine())` were instantiating fresh engines on every render — useRef discards the duplicates but the constructors still ran, leaking 3 orphan `Audio` elements per re-render in `CueEngine`'s case (over 100 observed in a single playthrough via DevTools instrumentation). Replaced with a `useLazyRef(() => new ...)` helper that runs the initializer at most once.
 
 ### Engineering notes
+
+- The narration bug surfaced as "audio for the next screen plays automatically while the previous text is still on screen." It couldn't be reproduced in a synthetic-tap automation harness across either slow (let-narration-end) or fast (rapid-skip) paths in desktop Chrome — but the audio engine had multiple latent races that all guarded against the *common* case while leaving edge cases (sync play-rejection, overlapping stop/play, deferred error events from `src=''` + `load()`) able to fire callbacks against the wrong audio instance. The fix removes the failure modes rather than papering over them.
+- Lesson: when a class holds a single mutable reference and uses object-identity checks (`if (this.audio === a)`) as its only guard, mixing async events (play promises, ended events, error events) with synchronous teardown means the guard succeeds *or fails* depending on event ordering. A monotonic generation counter is a stronger invariant — once `gen` advances, every callback captured at the prior `gen` is provably stale.
+
+### Added
+
+### Removed
 
 ---
 
