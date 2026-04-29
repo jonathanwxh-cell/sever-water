@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, type MutableRefObject } from 'react';
 import { gameNodes, type GameNode, type ChoiceOption } from '../data';
 import { applyChoice, shouldRenderLuYuanHesitationCallback, shouldRenderTooManyQuestions, getLiuRuyanOneOfThoseIntonation, resetState, saveProgress, loadProgress, clearProgress } from '../state';
 
@@ -151,35 +151,68 @@ class CueEngine {
 // ============================================================================
 class NarrationEngine {
   audio: HTMLAudioElement | null = null;
+  // Generation counter — incremented on every play() and stop(). Each in-flight
+  // playback captures its own gen; pending callbacks are no-ops once gen advances.
+  // This is more robust than `if (this.audio === a)` because it survives even if
+  // multiple stop/play cycles fire before async events drain.
+  private gen = 0;
 
   play(src: string, volume: number, onEnd?: () => void) {
     this.stop();
+    const myGen = ++this.gen;
     const a = new Audio(src);
     a.volume = volume;
-    a.onended = () => {
-      if (this.audio === a) { this.audio = null; onEnd?.(); }
-    };
-    a.onerror = () => {
-      if (this.audio === a) { this.audio = null; onEnd?.(); }
-    };
-    a.play().catch(() => {
-      if (this.audio === a) { this.audio = null; onEnd?.(); }
-    });
+    // Assign before play() — the catch handler must see this.audio === a even
+    // if the play promise rejects synchronously on some browsers.
     this.audio = a;
+    const fire = () => {
+      if (this.gen === myGen && this.audio === a) {
+        this.audio = null;
+        onEnd?.();
+      }
+    };
+    a.onended = fire;
+    a.onerror = fire;
+    a.play().catch(fire);
   }
 
   stop() {
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.src = '';
-      this.audio.load();
-      this.audio = null;
+    // Bump generation first so any pending async callbacks (ended/error/play
+    // rejections from the audio we're about to discard) become stale no-ops.
+    this.gen++;
+    const a = this.audio;
+    this.audio = null;
+    if (a) {
+      // Detach handlers BEFORE pause/src clear so we don't get a synthetic
+      // 'error' event from setting src='' invoking onerror after we thought
+      // the engine was idle.
+      a.onended = null;
+      a.onerror = null;
+      try {
+        a.pause();
+        a.currentTime = 0;
+        // Release decoder buffer so the file isn't held in memory.
+        a.removeAttribute('src');
+        a.load();
+      } catch {
+        // pause/load can throw if the element is in an odd state — safe to swallow.
+      }
     }
   }
 
   isPlaying() {
     return this.audio !== null && !this.audio.paused;
   }
+}
+
+// useLazyRef: like useRef but the initializer runs at most once (vs.
+// useRef(new X()) which constructs a fresh X on every render and discards it).
+// Without this, every state change in Game produced 3 orphan cue Audio
+// elements and a fresh NarrationEngine, observable in DevTools.
+function useLazyRef<T>(init: () => T): MutableRefObject<T> {
+  const ref = useRef<T | null>(null);
+  if (ref.current === null) ref.current = init();
+  return ref as MutableRefObject<T>;
 }
 
 // ============================================================================
@@ -219,8 +252,8 @@ export default function Game() {
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
   const [hasSave, setHasSave] = useState(false);
 
-  const cueRef = useRef(new CueEngine());
-  const narrRef = useRef(new NarrationEngine());
+  const cueRef = useLazyRef(() => new CueEngine());
+  const narrRef = useLazyRef(() => new NarrationEngine());
   const curNodeRef = useRef('title');
   const scrollRef = useRef<HTMLDivElement>(null);
   const advancingRef = useRef(false);
