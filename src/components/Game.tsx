@@ -463,19 +463,40 @@ export default function Game() {
             <div className="max-w-3xl mx-auto">
               {nodes.map(renderNode)}
 
-              {showChoices && choiceOptions.length > 0 && (
-                <div className="mt-6 space-y-3">
-                  <p className="text-sm font-serif text-white/50 uppercase tracking-wider mb-2">{choicePrompt}</p>
-                  {choiceOptions.map((choice) => (
-                    <button key={choice.id} onClick={(e) => { e.stopPropagation(); handleChoice(choice.id); }} className="w-full text-left px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-sm transition-colors">
-                      <span className="text-white/90 font-serif text-base block">{choice.label}</span>
-                      <span className="text-white/60 font-serif text-sm mt-1 block">{choice.text}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
               <div ref={scrollRef} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHOICE OVERLAY */}
+      {showChoices && choiceOptions.length > 0 && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-end md:justify-center bg-black/60 px-5 pt-16 pb-10 safe-bottom safe-top overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-5xl">
+            <p className="text-center text-white/50 tracking-[0.3em] text-xs md:text-sm uppercase mb-6">
+              {choicePrompt}
+            </p>
+            <div className="flex flex-col gap-3 md:grid md:grid-cols-3">
+              {choiceOptions.map((choice) => (
+                <button
+                  key={choice.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleChoice(choice.id);
+                  }}
+                  className="text-left border border-white/20 bg-black/70 hover:bg-white/10 hover:border-white/40 active:bg-white/15 px-5 py-5 transition-colors min-h-[8rem]"
+                >
+                  <div className="text-white/35 text-xs tracking-widest mb-3">
+                    {choice.id}
+                  </div>
+                  <div className="text-white/95 text-lg md:text-xl font-serif leading-tight">
+                    {choice.label}
+                  </div>
+                  <div className="text-white/55 text-sm font-serif leading-relaxed mt-2">
+                    {choice.intent}
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -492,22 +513,6 @@ export default function Game() {
           </div>
         )}
       </div>
-
-      {/* NARRATION SKIP */}
-      {narrationActive && phase === 'playing' && (
-        <div className="absolute bottom-[35%] right-4 z-40 mb-2">
-          <button onClick={(e) => { e.stopPropagation(); handleClick(); }} className="text-white/40 hover:text-white/70 text-xs font-serif uppercase tracking-wider transition-colors">
-            Skip narration
-          </button>
-        </div>
-      )}
-
-      {/* HINT */}
-      {phase === 'playing' && !showChoices && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 text-white/20 text-xs font-serif uppercase tracking-widest animate-pulse pointer-events-none">
-          {narrationActive ? 'Narration playing — click to skip' : 'Click or press space to continue'}
-        </div>
-      )}
     </div>
   );
 }
