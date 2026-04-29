@@ -12,12 +12,10 @@ src/
 │   └── Game.tsx          # Main game engine — audio, image crossfade, node advancement
 ├── data.ts               # Act 1 script nodes — all narration, dialogue, choices, branching
 ├── state.ts              # Heart state machine + callback resolver + flag tracking
-├── App.tsx               # Route shell
-├── main.tsx              # Entry point
+├── main.tsx              # Entry point — mounts Game directly
 ├── index.css             # Tailwind + custom fonts + transitions
-├── pages/Home.tsx        # Landing page
-├── hooks/use-mobile.ts   # Responsive hook
-└── lib/utils.ts          # cn() utility
+└── data.test.ts          # Data integrity tests (node graph, choice branches)
+└── state.test.ts         # State logic tests (choices, flags, callbacks)
 ```
 
 ### How it works
@@ -58,20 +56,23 @@ Output goes to `dist/`.
 ### Run tests
 
 ```bash
-node backup/state.test.js
+npm test
 ```
 
-Unit tests cover all 9 choices, flag/heart-state accumulation, callback resolver logic, edge cases, and three full playthrough paths.
+Tests run via **vitest**. Two test suites:
+- `src/state.test.ts` — choice effects, flag/heart-state accumulation, callback resolver logic, edge cases, three full playthrough paths.
+- `src/data.test.ts` — node graph integrity, choice branch wiring, dead-node detection.
 
-## Audio assets
+## Asset organization
 
-Place music cues in `public/assets/audio/`:
+```
+public/assets/
+├── audio/          # Music cues (cue1_mountain_gate_v0.mp3, etc.)
+├── narration/      # Voiceover files (nar_a1_s1_01_opening.mp3, etc.)
+└── images/         # Scene images (b1_08_style_anchor_moon.png, etc.)
+```
 
-- `cue1_mountain_gate_v0.mp3` — Scene 1: gorge confrontation
-- `cue2_one_line_sky_v0.mp3` — Scene 2: Liu Ruyan's introduction
-- `cue3_water_gazing_pavilion_v0.mp3` — Scene 3: the inn
-
-Place narration files in `public/assets/narration/` and images in `public/assets/images/`. See `src/data.ts` for the full asset map.
+See `src/data.ts` for the full asset map.
 
 ## Tech stack
 
@@ -79,6 +80,7 @@ Place narration files in `public/assets/narration/` and images in `public/assets
 - **Vite** for bundling
 - **Tailwind CSS 3** for styling
 - **EB Garamond** + **Noto Serif SC** for typography
+- **vitest** for testing
 
 ## Status
 
