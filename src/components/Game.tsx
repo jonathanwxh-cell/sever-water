@@ -271,6 +271,7 @@ export default function Game() {
     if (advancingRef.current) return;
     const node = gameNodes[nodeId];
     if (!node) return;
+    advancingRef.current = true;
 
     curNodeRef.current = nodeId;
 
@@ -453,7 +454,7 @@ export default function Game() {
 
   // RENDER
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-black select-none" onClick={handleClick}>
+    <div className="relative w-full h-screen-dynamic overflow-hidden bg-black select-none safe-bottom safe-top" onClick={handleClick}>
       {/* IMAGES */}
       <div className="absolute top-0 left-0 w-full h-[55%] md:h-[65%] overflow-hidden">
         {prevImg && <div className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000" style={{ backgroundImage: `url(${prevImg})`, opacity: prevImgFading ? 0 : 1 }} />}
