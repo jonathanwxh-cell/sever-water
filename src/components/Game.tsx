@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { gameNodes, type GameNode, type ChoiceOption } from '../data';
-import { applyChoice, shouldRenderLuYuanHesitationCallback, shouldRenderTooManyQuestions, getLiuRuyanOneOfThoseIntonation, resetState, saveProgress, loadProgress, clearProgress } from '../state';
+import { applyChoice, resetState, saveProgress, loadProgress, clearProgress } from '../state';
 import resolveCallbackNode from '../game/callback';
 import useAudioEngines from '../audio/useAudioEngines';
+import TitleScreen from "./TitleScreen";
+import SceneHud from "./SceneHud";
+import TextPanel from "./TextPanel";
+import ChoiceOverlay from "./ChoiceOverlay";
+import AudioControls from "./AudioControls";
+import AdvanceAffordance from "./AdvanceAffordance";
 
 
 // ============================================================================
@@ -12,7 +18,6 @@ const TITLE_DELAY_MS = 2000;
 const CHOICE_ADVANCE_MS = 500;
 const BUSY_LOCK_MS = 400;
 
-const VISIBLE_NODE_LIMIT = 3;
 
 export default function Game() {
   const [nodes, setNodes] = useState<GameNode[]>([]);
@@ -29,7 +34,6 @@ export default function Game() {
   const [prevImgFading, setPrevImgFading] = useState(false);
   const [narrationActive, setNarrationActive] = useState(false);
   const [volume, setVolume] = useState(0.8);
-  const [showVolSlider, setShowVolSlider] = useState(false);
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
   const [hasSave, setHasSave] = useState(() => {
     const save = loadProgress();
@@ -42,26 +46,20 @@ export default function Game() {
     const save = loadProgress();
     return save && save.currentNodeId !== 'title' ? save.currentNodeId : 'title';
   })());
-  const scrollRef = useRef<HTMLDivElement>(null);
   const advancingRef = useRef(false);
   const choiceLockedRef = useRef(false);
 
-  // SCROLL
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [nodes, showChoices]);
-
   // VOLUME
   useEffect(() => {
-    cueRef.current.setVolume(volume);
-    if (narrRef.current.audio) narrRef.current.audio.volume = volume;
+    cueRef.setVolume(volume);
+    if (narrRef.audio) narrRef.audio.volume = volume;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [volume]);
 
   // CLEANUP
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    return () => { cueRef.current.stopAll(); narrRef.current.stop(); };
+    return () => { cueRef.stopAll(); narrRef.stop(); };
   }, []);
   /* eslint-enable react-hooks/exhaustive-deps */
 
@@ -81,7 +79,7 @@ export default function Game() {
   const handleAudio = useCallback((node: GameNode) => {
     if (!node.audio) return;
     const { action, cue, duration, volume: vol } = node.audio;
-    const e = cueRef.current;
+    const e = cueRef;
     switch (action) {
       case 'play': e.playCue(cue, duration || 0); break;
       case 'fade-out': e.fadeOutCue(cue, duration || 2); break;
@@ -118,10 +116,10 @@ export default function Game() {
     if (node.image) setImage(node.image.src);
     handleAudio(node);
 
-    narrRef.current.stop();
+    narrRef.stop();
     if (node.narrationAudio) {
       setNarrationActive(true);
-      narrRef.current.play(node.narrationAudio, volume, () => setNarrationActive(false));
+      narrRef.play(node.narrationAudio, volume, () => setNarrationActive(false));
     } else {
       setNarrationActive(false);
     }
@@ -143,10 +141,10 @@ export default function Game() {
 
   // CLICK
   const handleClick = useCallback(() => {
-    if (!cueRef.current.userInteracted) cueRef.current.markInteracted();
+    if (!cueRef.userInteracted) cueRef.markInteracted();
 
     if (narrationActive && phase === 'playing') {
-      narrRef.current.stop();
+      narrRef.stop();
       setNarrationActive(false);
       const node = gameNodes[curNodeRef.current];
       if (node?.next) {
@@ -161,8 +159,8 @@ export default function Game() {
     if (phase === 'title') {
       if (!titleFade) {
         setTitleFade(true);
-        if (cueRef.current.activeCue !== 1) {
-          cueRef.current.playCue(1, 2);
+        if (cueRef.activeCue !== 1) {
+          cueRef.playCue(1, 2);
         }
         setTimeout(() => {
           setPhase('playing');
@@ -213,8 +211,8 @@ export default function Game() {
   const handleRestart = useCallback(() => {
     resetState();
     clearProgress();
-    cueRef.current.rebuild();
-    narrRef.current.stop();
+    cueRef.rebuild();
+    narrRef.stop();
     setNodes([]);
     setPhase('title');
     setTitleFade(false);
@@ -235,17 +233,17 @@ export default function Game() {
   }, []);
 
   const handleReturnToTitle = useCallback(() => {
-    narrRef.current.stop();
+    narrRef.stop();
     setNarrationActive(false);
 
-    const activeCue = cueRef.current.activeCue;
+    const activeCue = cueRef.activeCue;
     if (activeCue && activeCue !== 1) {
-      cueRef.current.fadeOutCue(activeCue, 2);
+      cueRef.fadeOutCue(activeCue, 2);
       setTimeout(() => {
-        cueRef.current.playCue(1, 2);
+        cueRef.playCue(1, 2);
       }, 1500);
     } else if (activeCue === 0) {
-      cueRef.current.playCue(1, 2);
+      cueRef.playCue(1, 2);
     }
 
     setPhase('title');
@@ -270,6 +268,14 @@ export default function Game() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentImg]);
 
+  // BEGIN ANEW (from title screen)
+  const handleBeginAnew = useCallback(() => {
+    resetState();
+    clearProgress();
+    setHasSave(false);
+    curNodeRef.current = 'title';
+  }, []);
+
   // KEYBOARD
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -278,37 +284,6 @@ export default function Game() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [handleClick]);
-
-  // RENDER NODE
-  const renderNode = (node: GameNode) => {
-    switch (node.type) {
-      case 'scene-heading':
-        return <div key={node.id} className="py-4 mt-2"><h2 className="text-lg md:text-xl font-serif text-white/60 tracking-widest uppercase">{node.text}</h2></div>;
-      case 'narration':
-        return <p key={node.id} className="text-base md:text-lg font-serif text-white/90 leading-loose mb-6 whitespace-pre-line">{node.text}</p>;
-      case 'dialogue':
-        return (
-          <div key={node.id} className="mb-4">
-            {node.speaker && <span className="text-sm font-serif text-white/50 uppercase tracking-wider block mb-1">{node.speaker}</span>}
-            <p className="text-base md:text-lg font-serif text-white/95 leading-relaxed pl-4 border-l-2 border-white/20">{node.text}</p>
-          </div>
-        );
-      case 'blockquote':
-        return <blockquote key={node.id} className="text-center py-6 my-4"><p className="text-xl md:text-2xl font-serif text-white/80 italic tracking-wide">{node.text}</p></blockquote>;
-      case 'ending':
-        return (
-          <div key={node.id} className="py-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-serif text-white tracking-widest">{node.text}</h2>
-            <p className="text-white/50 mt-4 font-serif">To be continued...</p>
-            <button onClick={(e) => { e.stopPropagation(); handleRestart(); }} className="mt-6 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-sm transition-colors">
-              <span className="text-white/90 font-serif text-base">Play Again</span>
-            </button>
-          </div>
-        );
-      default:
-        return <p key={node.id} className="text-base font-serif text-white/90 leading-loose mb-6 whitespace-pre-line">{node.text}</p>;
-    }
-  };
 
   // RENDER
   return (
@@ -322,130 +297,33 @@ export default function Game() {
 
       {/* TITLE */}
       {phase === 'title' && (
-        <div className={`absolute inset-0 z-20 flex flex-col items-center justify-center cursor-pointer transition-opacity duration-2000 ${titleFade ? 'opacity-0' : 'opacity-100'}`} onClick={(e) => { e.stopPropagation(); handleClick(); }}>
-          <h1 className="text-6xl md:text-8xl font-serif text-white tracking-widest mb-6 drop-shadow-lg">断水</h1>
-          <p className="text-xl md:text-2xl font-serif text-white/80 tracking-wide drop-shadow-md">SEVER WATER</p>
-          <p className="text-lg md:text-xl font-serif text-white/60 tracking-widest mt-2 drop-shadow-md">ACT 1 · THE DEBT</p>
-          <p className="text-xs font-serif text-white/30 tracking-widest mt-12 animate-pulse uppercase">
-            {hasSave ? 'Tap to continue' : 'Tap to begin'}
-          </p>
-          {hasSave && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                resetState();
-                clearProgress();
-                setHasSave(false);
-                curNodeRef.current = 'title';
-              }}
-              className="mt-6 text-[10px] font-serif text-white/25 hover:text-white/50 tracking-[0.2em] uppercase underline-offset-4 hover:underline transition-colors"
-            >
-              Begin Anew
-            </button>
-          )}
-        </div>
+        <TitleScreen
+          titleFade={titleFade}
+          hasSave={hasSave}
+          onClick={handleClick}
+          onBeginAnew={handleBeginAnew}
+        />
       )}
 
       {/* SCENE HUD */}
-      {phase === 'playing' && (sceneMeta.scene || sceneMeta.location || sceneMeta.mood) && (
-        <div className="absolute top-4 left-4 z-20 pointer-events-none safe-top">
-          {sceneMeta.scene && (
-            <div className="text-white/50 text-[10px] md:text-xs tracking-[0.3em] uppercase font-serif drop-shadow-md">
-              {sceneMeta.scene}
-            </div>
-          )}
-          {(sceneMeta.location || sceneMeta.mood) && (
-            <div className="text-white/40 text-[10px] md:text-xs tracking-[0.25em] uppercase font-serif mt-1 drop-shadow-md">
-              {[sceneMeta.location, sceneMeta.mood].filter(Boolean).join(' · ')}
-            </div>
-          )}
-        </div>
-      )}
+      {phase === 'playing' && <SceneHud sceneMeta={sceneMeta} />}
 
       {/* TEXT PANEL */}
       {phase !== 'title' && !showChoices && (
-        <div className="absolute bottom-0 left-0 w-full h-[45%] md:h-[35%] flex flex-col bg-gradient-to-t from-black via-black/95 via-65% to-transparent pointer-events-none">
-          <div className="flex-1 overflow-y-auto px-6 pt-12 pb-20 md:pb-12 pointer-events-auto">
-            <div className="max-w-3xl mx-auto">
-              {nodes.slice(-VISIBLE_NODE_LIMIT).map(renderNode)}
-
-              <div ref={scrollRef} />
-            </div>
-          </div>
-        </div>
+        <TextPanel nodes={nodes} onClick={handleClick} onRestart={handleRestart} />
       )}
 
       {/* CHOICE OVERLAY */}
       {showChoices && choiceOptions.length > 0 && (
-        <div className="absolute inset-0 z-30 flex flex-col items-center justify-end md:justify-center bg-black/60 px-5 pt-16 pb-10 safe-bottom safe-top overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-          <div className="w-full max-w-5xl">
-            <p className="text-center text-white/50 tracking-[0.3em] text-xs md:text-sm uppercase mb-6">
-              {choicePrompt}
-            </p>
-            <div className="flex flex-col gap-3 md:grid md:grid-cols-3">
-              {choiceOptions.map((choice) => (
-                <button
-                  key={choice.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleChoice(choice.id);
-                  }}
-                  className="text-left border border-white/20 bg-black/70 hover:bg-white/10 hover:border-white/40 active:bg-white/15 px-5 py-5 transition-colors min-h-[8rem]"
-                >
-                  <div className="text-white/35 text-xs tracking-widest mb-3">
-                    {choice.id}
-                  </div>
-                  <div className="text-white/95 text-lg md:text-xl font-serif leading-tight">
-                    {choice.label}
-                  </div>
-                  <div className="text-white/55 text-sm font-serif leading-relaxed mt-2">
-                    {choice.intent}
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <ChoiceOverlay choicePrompt={choicePrompt} choiceOptions={choiceOptions} onChoice={handleChoice} />
       )}
 
       {/* TOP-RIGHT CONTROLS */}
-      <div className="absolute top-4 right-4 z-50 flex items-center gap-1 safe-top">
-        {phase !== 'title' && (
-          <button
-            onClick={(e) => { e.stopPropagation(); handleReturnToTitle(); }}
-            className="text-white/50 hover:text-white/80 p-2"
-            aria-label="Return to title"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </button>
-        )}
-        <div className="relative">
-          <button
-            onClick={(e) => { e.stopPropagation(); setShowVolSlider(!showVolSlider); }}
-            className="text-white/50 hover:text-white/80 p-2"
-            aria-label="Volume"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-          </button>
-          {showVolSlider && (
-            <div className="absolute top-full right-0 mt-2 p-3 bg-black/80 rounded-sm" onClick={(e) => e.stopPropagation()}>
-              <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="w-24 accent-white/60" />
-            </div>
-          )}
-        </div>
-      </div>
+      <AudioControls phase={phase} volume={volume} onVolumeChange={setVolume} onReturnToTitle={handleReturnToTitle} />
 
       {/* ADVANCE AFFORDANCE */}
       {phase === 'playing' && !showChoices && (
-        <div className="absolute bottom-0 left-0 w-full z-30 safe-bottom pointer-events-none">
-          <div className="flex items-center justify-center pb-4 pointer-events-none">
-            <div className="text-white/40 text-[11px] md:text-xs font-serif uppercase tracking-[0.25em] animate-pulse">
-              {narrationActive ? 'Tap to skip narration' : 'Tap to continue'}
-            </div>
-          </div>
-        </div>
+        <AdvanceAffordance narrationActive={narrationActive} />
       )}
     </div>
   );
