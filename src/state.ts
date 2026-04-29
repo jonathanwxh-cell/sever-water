@@ -148,7 +148,7 @@ export function loadProgress(): SaveData | null {
     Object.assign(flags, parsed.flags);
     return parsed;
   } catch {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
+    try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
     return null;
   }
 }
