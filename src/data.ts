@@ -9,7 +9,8 @@
 export interface ChoiceOption {
   id: string;
   label: string;
-  text: string;
+  intent: string;
+  outcome: string;
 }
 
 export interface AudioTrigger {
@@ -167,18 +168,21 @@ export const gameNodes: Record<string, GameNode> = {
     choices: [
       {
         id: '1A',
-        label: 'A) Hand it over.',
-        text: 'Your teacher\'s last instruction to you. But his first instruction — the one that shaped every day since you were a child — was to survive. You cannot deliver a letter if you are dead. You hold it out into the rain. The paper will be ruined before he reads it anyway.',
+        label: 'Hand over the letter',
+        intent: 'Survive the gorge. Carry the shame later.',
+        outcome: 'Your teacher\'s last instruction to you. But his first instruction — the one that shaped every day since you were a child — was to survive. You cannot deliver a letter if you are dead. You hold it out into the rain. The paper will be ruined before he reads it anyway.',
       },
       {
         id: '1B',
-        label: 'B) Say nothing and attack.',
-        text: 'He\'s been talking too long. People who are confident don\'t explain themselves to a lone disciple in the rain. They\'re afraid — of the technique, of the name Cold Mountain, of what happens if they fail. You know this because your teacher taught you to read the space between words. You step forward before he finishes his next breath.',
+        label: 'Strike before he finishes speaking',
+        intent: 'Trust the sword. Keep the mission alive.',
+        outcome: 'He\'s been talking too long. People who are confident don\'t explain themselves to a lone disciple in the rain. They\'re afraid — of the technique, of the name Cold Mountain, of what happens if they fail. You know this because your teacher taught you to read the space between words. You step forward before he finishes his next breath.',
       },
       {
         id: '1C',
-        label: 'C) "Who sent you?"',
-        text: 'You lower the blade a fraction — enough to seem reasonable, not enough to seem weak. If someone knows about the letter, someone who can hire four men to wait in a gorge on a specific day, then your teacher\'s fear was not for you. It was for what happens after you leave. The question matters more than the letter.',
+        label: 'Ask who sent them',
+        intent: 'Risk the moment to uncover the deeper threat.',
+        outcome: 'You lower the blade a fraction — enough to seem reasonable, not enough to seem weak. If someone knows about the letter, someone who can hire four men to wait in a gorge on a specific day, then your teacher\'s fear was not for you. It was for what happens after you leave. The question matters more than the letter.',
       },
     ],
     next: 'scene2_heading',
@@ -272,18 +276,21 @@ export const gameNodes: Record<string, GameNode> = {
     choices: [
       {
         id: '2A',
-        label: 'A) Your name and your word.',
-        text: '"Shen Mo. I owe you a life. When you call, I come." You do not kneel — she does not seem like someone who wants kneeling — but you speak the words clearly, so the gorge walls hear them. So there are witnesses, even if the witnesses are only rain and stone. A debt spoken is a debt held.',
+        label: 'Speak a life-debt aloud',
+        intent: 'Make the debt real by giving it witnesses.',
+        outcome: '"Shen Mo. I owe you a life. When you call, I come." You do not kneel — she does not seem like someone who wants kneeling — but you speak the words clearly, so the gorge walls hear them. So there are witnesses, even if the witnesses are only rain and stone. A debt spoken is a debt held.',
       },
       {
         id: '2B',
-        label: 'B) Tend her wound.',
-        text: 'Say nothing of debt. You tear a strip from your already-ruined sleeve and press it against her side. She flinches. Does not pull away. Words of gratitude are cheap. You will remember. When the time comes, you will act. Until then, silence is a form of honesty that the jianghu has forgotten. She seems like someone who would understand that.',
+        label: 'Tend her wound in silence',
+        intent: 'Let action carry what words would cheapen.',
+        outcome: 'Say nothing of debt. You tear a strip from your already-ruined sleeve and press it against her side. She flinches. Does not pull away. Words of gratitude are cheap. You will remember. When the time comes, you will act. Until then, silence is a form of honesty that the jianghu has forgotten. She seems like someone who would understand that.',
       },
       {
         id: '2C',
-        label: 'C) "Why did you change your mind?"',
-        text: 'You do not thank her. You do not touch her. You ask the question that matters. "You could have waited. Taken the letter from my body. Why intervene?" She meets your eyes. The rain has matted her hair against her temple. She smiles — not warmly. Like someone who has been asked the right question by the wrong person.',
+        label: 'Ask why she saved you',
+        intent: 'Refuse gratitude until the truth is named.',
+        outcome: 'You do not thank her. You do not touch her. You ask the question that matters. "You could have waited. Taken the letter from my body. Why intervene?" She meets your eyes. The rain has matted her hair against her temple. She smiles — not warmly. Like someone who has been asked the right question by the wrong person.',
       },
     ],
     audio: { action: 'fade-out', cue: 2, duration: 3 },
@@ -424,18 +431,21 @@ export const gameNodes: Record<string, GameNode> = {
     choices: [
       {
         id: '3A',
-        label: 'A) Ride for Cold Mountain immediately.',
-        text: 'Your teacher is dying. Your sect is broken. Your sect-brother is seventeen and terrified and trying to hold himself together in a stranger\'s inn. Liu Ruyan is stable — the innkeeper\'s wife will tend her. You leave a note. It is not enough. You know this. You leave it anyway. The moon is cold and indifferent and exactly as it has always been.',
+        label: 'Ride for Cold Mountain now',
+        intent: 'Choose sect and teacher before all debts.',
+        outcome: 'Your teacher is dying. Your sect is broken. Your sect-brother is seventeen and terrified and trying to hold himself together in a stranger\'s inn. Liu Ruyan is stable — the innkeeper\'s wife will tend her. You leave a note. It is not enough. You know this. You leave it anyway. The moon is cold and indifferent and exactly as it has always been.',
       },
       {
         id: '3B',
-        label: 'B) Stay until dawn.',
-        text: 'Whatever has happened on Cold Mountain has already happened. A few hours will change nothing for your teacher. But the woman who bled for you deserves a waking farewell. You tell Lu Yuan to rest the horse and wait. When Liu Ruyan opens her eyes, you are still there. She does not thank you. She doesn\'t need to. In the grey pre-dawn light, she says only: "So you\'re one of those." You don\'t ask what she means.',
+        label: 'Stay until dawn',
+        intent: 'Give the woman who bled for you a waking farewell.',
+        outcome: 'Whatever has happened on Cold Mountain has already happened. A few hours will change nothing for your teacher. But the woman who bled for you deserves a waking farewell. You tell Lu Yuan to rest the horse and wait. When Liu Ruyan opens her eyes, you are still there. She does not thank you. She doesn\'t need to.',
       },
       {
         id: '3C',
-        label: 'C) Bring her with you.',
-        text: 'You cannot leave her alone in a river inn with a wound and four dead men\'s allies somewhere behind you. And you cannot abandon your teacher. So you make the impossible choice — both. You wake her gently. Explain. She is too weak to ride alone. You share a horse. Lu Yuan rides ahead. The three of you travel through the night, and no one speaks, because there is nothing to say that would make any of this easier.',
+        label: 'Bring her with you',
+        intent: 'Make the impossible choice — both debt and duty.',
+        outcome: 'You cannot leave her alone in a river inn with a wound and four dead men\'s allies somewhere behind you. And you cannot abandon your teacher. So you make the impossible choice — both. You wake her gently. Explain. She is too weak to ride alone. You share a horse. Lu Yuan rides ahead. The three of you travel through the night, and no one speaks, because there is nothing to say that would make any of this easier.',
       },
     ],
     audio: { action: 'fade-out', cue: 3, duration: 3 },

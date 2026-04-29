@@ -340,7 +340,7 @@ export default function Game() {
 
     const choice = choiceOptions.find((c) => c.id === choiceId);
     if (choice) {
-      setNodes((prev) => [...prev, { id: `choice_${choiceId}`, text: choice.text, type: 'narration' as const }]);
+      setNodes((prev) => [...prev, { id: `choice_${choiceId}`, text: choice.outcome, type: 'narration' as const }]);
     }
 
     setShowChoices(false);
