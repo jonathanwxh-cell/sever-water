@@ -242,13 +242,16 @@ export default function Game() {
   }, []);
 
   // IMAGE
-  const setImage = useCallback((src?: string, duration = 1) => {
-    if (!src || src === currentImg) return;
-    setPrevImg(currentImg);
-    setCurrentImg(src);
+  const setImage = useCallback((src?: string, _duration = 1) => {
+    if (!src) return;
+    setCurrentImg((latest) => {
+      if (latest === src) return latest;
+      setPrevImg(latest);
+      return src;
+    });
     requestAnimationFrame(() => setPrevImgFading(true));
-    setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, duration * 1000);
-  }, [currentImg]);
+    setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, 1000);
+  }, []);
 
   // AUDIO TRIGGERS
   const handleAudio = useCallback((node: GameNode) => {
