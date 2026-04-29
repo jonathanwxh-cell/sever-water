@@ -217,6 +217,7 @@ export default function Game() {
   const [volume, setVolume] = useState(0.8);
   const [showVolSlider, setShowVolSlider] = useState(false);
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
+  const [hasSave, setHasSave] = useState(false);
 
   const cueRef = useRef(new CueEngine());
   const narrRef = useRef(new NarrationEngine());
@@ -336,7 +337,14 @@ export default function Game() {
       if (!titleFade) {
         setTitleFade(true);
         cueRef.current.playCue(1, 2);
-        setTimeout(() => { setPhase('playing'); advance('scene1_heading'); }, TITLE_DELAY_MS);
+        setTimeout(() => {
+          setPhase('playing');
+          if (hasSave && curNodeRef.current !== 'title') {
+            advance(curNodeRef.current);
+          } else {
+            advance('scene1_heading');
+          }
+        }, TITLE_DELAY_MS);
       }
       return;
     }
@@ -344,7 +352,7 @@ export default function Game() {
     const node = gameNodes[curNodeRef.current];
     if (!node?.next) return;
     advance(node.next);
-  }, [phase, titleFade, showChoices, narrationActive, advance]);
+  }, [phase, titleFade, showChoices, narrationActive, advance, hasSave]);
 
   // CHOICE
   const handleChoice = useCallback((choiceId: string) => {
@@ -397,6 +405,27 @@ export default function Game() {
     if (t.image) setCurrentImg(t.image.src);
   }, []);
 
+  const handleReturnToTitle = useCallback(() => {
+    narrRef.current.stop();
+    setNarrationActive(false);
+    if (cueRef.current.activeCue !== 0) {
+      cueRef.current.fadeOutCue(cueRef.current.activeCue, 2);
+    }
+    setPhase('title');
+    setTitleFade(false);
+    setShowChoices(false);
+    setChoiceOptions([]);
+    setChoicePrompt('');
+    setCurrentImg(null);
+    setPrevImg(null);
+    setPrevImgFading(false);
+    setSceneMeta({});
+    curNodeRef.current = 'title';
+    advancingRef.current = false;
+    choiceLockedRef.current = false;
+    setHasSave(true);
+  }, [currentImg, hasSave, setHasSave]);
+
   // KEYBOARD
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -441,11 +470,12 @@ export default function Game() {
   useEffect(() => {
     const save = loadProgress();
     if (save && save.currentNodeId !== 'title') {
+      setHasSave(true);
       curNodeRef.current = save.currentNodeId;
-      setPhase('playing');
-      cueRef.current.markInteracted();
-      advance(save.currentNodeId);
+      const t = gameNodes['title'];
+      if (t.image) setCurrentImg(t.image.src);
     } else {
+      setHasSave(false);
       const t = gameNodes['title'];
       if (t.image) setCurrentImg(t.image.src);
     }
@@ -468,7 +498,23 @@ export default function Game() {
           <h1 className="text-6xl md:text-8xl font-serif text-white tracking-widest mb-6 drop-shadow-lg">断水</h1>
           <p className="text-xl md:text-2xl font-serif text-white/80 tracking-wide drop-shadow-md">SEVER WATER</p>
           <p className="text-lg md:text-xl font-serif text-white/60 tracking-widest mt-2 drop-shadow-md">ACT 1 · THE DEBT</p>
-          <p className="text-xs font-serif text-white/30 tracking-widest mt-12 animate-pulse uppercase">Click anywhere to begin</p>
+          <p className="text-xs font-serif text-white/30 tracking-widest mt-12 animate-pulse uppercase">
+            {hasSave ? 'Tap to continue' : 'Tap to begin'}
+          </p>
+          {hasSave && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                resetState();
+                clearProgress();
+                setHasSave(false);
+                curNodeRef.current = 'title';
+              }}
+              className="mt-6 text-[10px] font-serif text-white/25 hover:text-white/50 tracking-[0.2em] uppercase underline-offset-4 hover:underline transition-colors"
+            >
+              Begin Anew
+            </button>
+          )}
         </div>
       )}
 
@@ -534,16 +580,33 @@ export default function Game() {
         </div>
       )}
 
-      {/* VOLUME */}
-      <div className="absolute top-4 right-4 z-50">
-        <button onClick={(e) => { e.stopPropagation(); setShowVolSlider(!showVolSlider); }} className="text-white/50 hover:text-white/80 p-2" aria-label="Volume">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
-        </button>
-        {showVolSlider && (
-          <div className="absolute top-full right-0 mt-2 p-3 bg-black/80 rounded-sm" onClick={(e) => e.stopPropagation()}>
-            <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="w-24 accent-white/60" />
-          </div>
+      {/* TOP-RIGHT CONTROLS */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-1 safe-top">
+        {phase !== 'title' && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleReturnToTitle(); }}
+            className="text-white/50 hover:text-white/80 p-2"
+            aria-label="Return to title"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </button>
         )}
+        <div className="relative">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowVolSlider(!showVolSlider); }}
+            className="text-white/50 hover:text-white/80 p-2"
+            aria-label="Volume"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" /></svg>
+          </button>
+          {showVolSlider && (
+            <div className="absolute top-full right-0 mt-2 p-3 bg-black/80 rounded-sm" onClick={(e) => e.stopPropagation()}>
+              <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(e) => setVolume(parseFloat(e.target.value))} className="w-24 accent-white/60" />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ADVANCE AFFORDANCE */}
