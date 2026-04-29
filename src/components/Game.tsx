@@ -199,6 +199,8 @@ const TITLE_DELAY_MS = 2000;
 const CHOICE_ADVANCE_MS = 500;
 const BUSY_LOCK_MS = 400;
 
+const VISIBLE_NODE_LIMIT = 3;
+
 export default function Game() {
   const [nodes, setNodes] = useState<GameNode[]>([]);
   const [phase, setPhase] = useState<'title' | 'playing' | 'ended'>('title');
@@ -461,7 +463,7 @@ export default function Game() {
         <div className="absolute bottom-0 left-0 w-full h-[45%] md:h-[35%] flex flex-col bg-gradient-to-t from-black via-black/95 via-65% to-transparent pointer-events-none">
           <div className="flex-1 overflow-y-auto px-6 pt-12 pb-20 md:pb-12 pointer-events-auto">
             <div className="max-w-3xl mx-auto">
-              {nodes.map(renderNode)}
+              {nodes.slice(-VISIBLE_NODE_LIMIT).map(renderNode)}
 
               <div ref={scrollRef} />
             </div>
