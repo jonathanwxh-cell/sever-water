@@ -396,7 +396,7 @@ export default function Game() {
       case 'scene-heading':
         return <div key={node.id} className="py-4 mt-2"><h2 className="text-lg md:text-xl font-serif text-white/60 tracking-widest uppercase">{node.text}</h2></div>;
       case 'narration':
-        return <p key={node.id} className="text-base md:text-lg font-serif text-white/90 leading-relaxed mb-4">{node.text}</p>;
+        return <p key={node.id} className="text-base md:text-lg font-serif text-white/90 leading-loose mb-6 whitespace-pre-line">{node.text}</p>;
       case 'dialogue':
         return (
           <div key={node.id} className="mb-4">
@@ -417,7 +417,7 @@ export default function Game() {
           </div>
         );
       default:
-        return <p key={node.id} className="text-base font-serif text-white/90 leading-relaxed mb-4">{node.text}</p>;
+        return <p key={node.id} className="text-base font-serif text-white/90 leading-loose mb-6 whitespace-pre-line">{node.text}</p>;
     }
   };
 
@@ -440,7 +440,7 @@ export default function Game() {
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black select-none" onClick={handleClick}>
       {/* IMAGES */}
-      <div className="absolute top-0 left-0 w-full h-[65%] overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-[55%] md:h-[65%] overflow-hidden">
         {prevImg && <div className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000" style={{ backgroundImage: `url(${prevImg})`, opacity: prevImgFading ? 0 : 1 }} />}
         {currentImg && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${currentImg})` }} />}
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
@@ -457,9 +457,9 @@ export default function Game() {
       )}
 
       {/* TEXT PANEL */}
-      {phase !== 'title' && (
-        <div className="absolute bottom-0 left-0 w-full h-[35%] flex flex-col">
-          <div className="flex-1 overflow-y-auto px-6 py-4 bg-gradient-to-b from-black/70 via-black/85 to-black/95">
+      {phase !== 'title' && !showChoices && (
+        <div className="absolute bottom-0 left-0 w-full h-[45%] md:h-[35%] flex flex-col bg-gradient-to-t from-black via-black/95 via-65% to-transparent pointer-events-none">
+          <div className="flex-1 overflow-y-auto px-6 pt-12 pb-20 md:pb-12 pointer-events-auto">
             <div className="max-w-3xl mx-auto">
               {nodes.map(renderNode)}
 
