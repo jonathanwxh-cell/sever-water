@@ -333,6 +333,9 @@ export default function Game() {
 
   // CHOICE
   const handleChoice = useCallback((choiceId: string) => {
+    if (choiceLockedRef.current) return;
+    choiceLockedRef.current = true;
+
     applyChoice(choiceId);
 
     const choice = choiceOptions.find((c) => c.id === choiceId);
@@ -345,15 +348,21 @@ export default function Game() {
 
     const currentNode = gameNodes[curNodeRef.current];
     const nextId = currentNode.next || 'act1_end';
+    const resolvedNextId = resolveCallbackNode(choiceId, nextId);
 
-    setTimeout(() => { advance(resolveCallbackNode(choiceId, nextId)); }, CHOICE_ADVANCE_MS);
+    saveProgress(resolvedNextId);
+
+    setTimeout(() => {
+      choiceLockedRef.current = false;
+      advance(resolvedNextId);
+    }, CHOICE_ADVANCE_MS);
   }, [choiceOptions, advance]);
 
   // RESTART
   const handleRestart = useCallback(() => {
     resetState();
     clearProgress();
-    cueRef.current.rebuild();   // ← fresh Audio objects for second playthrough
+    cueRef.current.rebuild();
     narrRef.current.stop();
     setNodes([]);
     setPhase('title');
@@ -367,6 +376,7 @@ export default function Game() {
     setNarrationActive(false);
     curNodeRef.current = 'title';
     advancingRef.current = false;
+    choiceLockedRef.current = false;
     const t = gameNodes['title'];
     if (t.image) setCurrentImg(t.image.src);
   }, []);
