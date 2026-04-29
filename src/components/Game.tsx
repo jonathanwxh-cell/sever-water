@@ -336,7 +336,9 @@ export default function Game() {
     if (phase === 'title') {
       if (!titleFade) {
         setTitleFade(true);
-        cueRef.current.playCue(1, 2);
+        if (cueRef.current.activeCue !== 1) {
+          cueRef.current.playCue(1, 2);
+        }
         setTimeout(() => {
           setPhase('playing');
           if (hasSave && curNodeRef.current !== 'title') {
