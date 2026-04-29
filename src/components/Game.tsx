@@ -36,7 +36,7 @@ class CueEngine {
 
   rebuild() {
     Object.values(this.cues).forEach((a) => {
-      try { a.pause(); a.src = ''; a.load(); } catch {}
+      try { a.pause(); a.src = ''; a.load(); } catch { /* ignore */ }
     });
     this.clearTimers();
     this.activeCue = 0;
@@ -241,16 +241,23 @@ export default function Game() {
   const [showChoices, setShowChoices] = useState(false);
   const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]);
   const [choicePrompt, setChoicePrompt] = useState('');
-  const [currentImg, setCurrentImg] = useState<string | null>(
-    '/assets/images/b1_08_style_anchor_moon.png'
-  );
+  const [currentImg, setCurrentImg] = useState<string | null>(() => {
+    const save = loadProgress();
+    if (save && save.currentNodeId !== 'title') {
+      return gameNodes['title'].image?.src ?? '/assets/images/b1_08_style_anchor_moon.png';
+    }
+    return '/assets/images/b1_08_style_anchor_moon.png';
+  });
   const [prevImg, setPrevImg] = useState<string | null>(null);
   const [prevImgFading, setPrevImgFading] = useState(false);
   const [narrationActive, setNarrationActive] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [showVolSlider, setShowVolSlider] = useState(false);
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
-  const [hasSave, setHasSave] = useState(false);
+  const [hasSave, setHasSave] = useState(() => {
+    const save = loadProgress();
+    return !!(save && save.currentNodeId !== 'title');
+  });
 
   const cueRef = useLazyRef(() => new CueEngine());
   const narrRef = useLazyRef(() => new NarrationEngine());
@@ -271,12 +278,14 @@ export default function Game() {
   }, [volume]);
 
   // CLEANUP
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     return () => { cueRef.current.stopAll(); narrRef.current.stop(); };
   }, []);
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   // IMAGE
-  const setImage = useCallback((src?: string, _duration = 1) => {
+  const setImage = useCallback((src?: string) => {
     if (!src) return;
     setCurrentImg((latest) => {
       if (latest === src) return latest;
@@ -324,7 +333,7 @@ export default function Game() {
     if (node.type === 'ending') setPhase('ended');
     else if (node.type !== 'title') setPhase('playing');
 
-    if (node.image) setImage(node.image.src, node.image.duration || 1);
+    if (node.image) setImage(node.image.src);
     handleAudio(node);
 
     narrRef.current.stop();
@@ -514,22 +523,6 @@ export default function Game() {
         return <p key={node.id} className="text-base font-serif text-white/90 leading-loose mb-6 whitespace-pre-line">{node.text}</p>;
     }
   };
-
-  // INIT
-  useEffect(() => {
-    const save = loadProgress();
-    if (save && save.currentNodeId !== 'title') {
-      setHasSave(true);
-      curNodeRef.current = save.currentNodeId;
-      const t = gameNodes['title'];
-      if (t.image) setCurrentImg(t.image.src);
-    } else {
-      setHasSave(false);
-      const t = gameNodes['title'];
-      if (t.image) setCurrentImg(t.image.src);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // RENDER
   return (
