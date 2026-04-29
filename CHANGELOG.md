@@ -6,6 +6,22 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) loosely, with
 
 ---
 
+## [Unreleased]
+
+*Add entries here as work progresses. Promote to a versioned section when tagging a release.*
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Engineering notes
+
+---
+
 ## [v0.3.0-act1] — 2026-04-29
 
 ### Act 1 — Stable Mobile Build
