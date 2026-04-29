@@ -1,3 +1,18 @@
+/* Use dynamic viewport height where supported (iOS Safari, modern browsers) */
+.h-screen-dynamic {
+  height: 100vh;        /* fallback */
+  height: 100dvh;       /* dynamic viewport, accounts for collapsing toolbars */
+}
+
+/* Safe area padding for notch / home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0);
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
