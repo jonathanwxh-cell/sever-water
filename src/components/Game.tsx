@@ -16,6 +16,10 @@ class CueEngine {
   timers: ReturnType<typeof setInterval>[] = [];
 
   constructor() {
+    this.buildCues();
+  }
+
+  private buildCues() {
     const makeCue = (src: string) => {
       const a = new Audio(src);
       a.loop = true;
@@ -27,6 +31,16 @@ class CueEngine {
       2: makeCue('/assets/audio/cue2_one_line_sky_v0.mp3'),
       3: makeCue('/assets/audio/cue3_water_gazing_pavilion_v0.mp3'),
     };
+    this.cueScales = { 1: 1.0, 2: 1.0, 3: 1.0 };
+  }
+
+  rebuild() {
+    Object.values(this.cues).forEach((a) => {
+      try { a.pause(); a.src = ''; a.load(); } catch {}
+    });
+    this.clearTimers();
+    this.activeCue = 0;
+    this.buildCues();
   }
 
   private addTimer(t: ReturnType<typeof setInterval>) {
@@ -338,7 +352,7 @@ export default function Game() {
   const handleRestart = useCallback(() => {
     resetState();
     clearProgress();
-    cueRef.current.stopAll();
+    cueRef.current.rebuild();   // ← fresh Audio objects for second playthrough
     narrRef.current.stop();
     setNodes([]);
     setPhase('title');
