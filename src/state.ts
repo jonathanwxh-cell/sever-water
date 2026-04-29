@@ -110,15 +110,45 @@ export function saveProgress(currentNodeId: string): void {
   }
 }
 
+function isValidSaveData(value: unknown): value is SaveData {
+  if (!value || typeof value !== 'object') return false;
+  const data = value as Partial<SaveData>;
+  if (typeof data.currentNodeId !== 'string') return false;
+  if (typeof data.timestamp !== 'number') return false;
+  if (!data.heartState || !data.flags) return false;
+  const h = data.heartState as Partial<HeartState>;
+  const f = data.flags as Partial<Flags>;
+  return (
+    typeof h.cheng === 'number' &&
+    typeof h.yuan === 'number' &&
+    typeof h.huo === 'number' &&
+    typeof h.leng === 'number' &&
+    typeof f.A1 === 'boolean' &&
+    typeof f.B1 === 'boolean' &&
+    typeof f.C1 === 'boolean' &&
+    typeof f.A2 === 'boolean' &&
+    typeof f.B2 === 'boolean' &&
+    typeof f.C2 === 'boolean' &&
+    typeof f.A3 === 'boolean' &&
+    typeof f.B3 === 'boolean' &&
+    typeof f.C3 === 'boolean'
+  );
+}
+
 export function loadProgress(): SaveData | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as SaveData;
-    Object.assign(heartState, data.heartState);
-    Object.assign(flags, data.flags);
-    return data;
+    const parsed = JSON.parse(raw);
+    if (!isValidSaveData(parsed)) {
+      localStorage.removeItem(SAVE_KEY);
+      return null;
+    }
+    Object.assign(heartState, parsed.heartState);
+    Object.assign(flags, parsed.flags);
+    return parsed;
   } catch {
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
     return null;
   }
 }
