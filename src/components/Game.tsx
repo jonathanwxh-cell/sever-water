@@ -219,7 +219,8 @@ export default function Game() {
   const narrRef = useRef(new NarrationEngine());
   const curNodeRef = useRef('title');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const busyRef = useRef(false);
+  const advancingRef = useRef(false);
+  const choiceLockedRef = useRef(false);
 
   // SCROLL
   useEffect(() => {
@@ -261,7 +262,7 @@ export default function Game() {
 
   // ADVANCE
   const advance = useCallback((nodeId: string) => {
-    if (busyRef.current) return;
+    if (advancingRef.current) return;
     const node = gameNodes[nodeId];
     if (!node) return;
 
@@ -296,7 +297,7 @@ export default function Game() {
       setChoiceOptions([]);
     }
 
-    setTimeout(() => { busyRef.current = false; }, BUSY_LOCK_MS);
+    setTimeout(() => { advancingRef.current = false; }, BUSY_LOCK_MS);
   }, [handleAudio, setImage, volume]);
 
   // CLICK
@@ -308,7 +309,7 @@ export default function Game() {
       setNarrationActive(false);
       const node = gameNodes[curNodeRef.current];
       if (node?.next) {
-        busyRef.current = false;
+        advancingRef.current = false;
         advance(node.next);
       }
       return;
@@ -365,7 +366,7 @@ export default function Game() {
     setPrevImgFading(false);
     setNarrationActive(false);
     curNodeRef.current = 'title';
-    busyRef.current = false;
+    advancingRef.current = false;
     const t = gameNodes['title'];
     if (t.image) setCurrentImg(t.image.src);
   }, []);
