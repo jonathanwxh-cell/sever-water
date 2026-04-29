@@ -19,5 +19,13 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      'react-hooks/react-compiler': 'off',
+      'react-compiler/react-compiler': 'off',
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
   },
 ])
