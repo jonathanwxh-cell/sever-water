@@ -31,6 +31,9 @@ export interface GameNode {
   text: string;
   type: 'narration' | 'dialogue' | 'blockquote' | 'choice' | 'scene-heading' | 'title' | 'ending';
   speaker?: string;
+  sceneLabel?: string;
+  locationLabel?: string;
+  moodLabel?: string;
   narrationAudio?: string;
   image?: ImageTrigger;
   audio?: AudioTrigger;
@@ -92,6 +95,9 @@ export const gameNodes: Record<string, GameNode> = {
     id: 'scene1_heading',
     text: 'SCENE 1 · ONE-LINE SKY',
     type: 'scene-heading',
+    sceneLabel: 'ACT I · THE DEBT',
+    locationLabel: 'ONE-LINE SKY',
+    moodLabel: 'RAIN',
     next: 's1_opening',
   },
 
@@ -195,6 +201,9 @@ export const gameNodes: Record<string, GameNode> = {
     id: 'scene2_heading',
     text: 'SCENE 2 · THE THIRD SHADOW',
     type: 'scene-heading',
+    sceneLabel: 'ACT I · THE DEBT',
+    locationLabel: 'ONE-LINE SKY',
+    moodLabel: 'AFTERMATH',
     image: { src: IMG.gorge_rescue, transition: 'crossfade', duration: 2 },
     next: 's2_opening',
   },
@@ -304,6 +313,9 @@ export const gameNodes: Record<string, GameNode> = {
     id: 'scene3_heading',
     text: 'SCENE 3 · THE INN AT CROSSING-STONE',
     type: 'scene-heading',
+    sceneLabel: 'ACT I · THE DEBT',
+    locationLabel: 'WATER-GAZING PAVILION',
+    moodLabel: 'HALF-MOON',
     image: { src: IMG.inn_exterior, transition: 'crossfade', duration: 2 },
     audio: { action: 'fade-in', cue: 3, duration: 2 },
     next: 's3_inn',

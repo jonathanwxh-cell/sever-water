@@ -216,6 +216,7 @@ export default function Game() {
   const [narrationActive, setNarrationActive] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [showVolSlider, setShowVolSlider] = useState(false);
+  const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
 
   const cueRef = useRef(new CueEngine());
   const narrRef = useRef(new NarrationEngine());
@@ -269,6 +270,14 @@ export default function Game() {
     if (!node) return;
 
     curNodeRef.current = nodeId;
+
+    if (node.sceneLabel || node.locationLabel || node.moodLabel) {
+      setSceneMeta((prev) => ({
+        scene: node.sceneLabel ?? prev.scene,
+        location: node.locationLabel ?? prev.location,
+        mood: node.moodLabel ?? prev.mood,
+      }));
+    }
 
     if (node.type === 'scene-heading' || node.type === 'title') {
       saveProgress(nodeId);
@@ -376,6 +385,7 @@ export default function Game() {
     setPrevImg(null);
     setPrevImgFading(false);
     setNarrationActive(false);
+    setSceneMeta({});
     curNodeRef.current = 'title';
     advancingRef.current = false;
     choiceLockedRef.current = false;
@@ -455,6 +465,22 @@ export default function Game() {
           <p className="text-xl md:text-2xl font-serif text-white/80 tracking-wide drop-shadow-md">SEVER WATER</p>
           <p className="text-lg md:text-xl font-serif text-white/60 tracking-widest mt-2 drop-shadow-md">ACT 1 · THE DEBT</p>
           <p className="text-xs font-serif text-white/30 tracking-widest mt-12 animate-pulse uppercase">Click anywhere to begin</p>
+        </div>
+      )}
+
+      {/* SCENE HUD */}
+      {phase === 'playing' && (sceneMeta.scene || sceneMeta.location || sceneMeta.mood) && (
+        <div className="absolute top-4 left-4 z-20 pointer-events-none safe-top">
+          {sceneMeta.scene && (
+            <div className="text-white/50 text-[10px] md:text-xs tracking-[0.3em] uppercase font-serif drop-shadow-md">
+              {sceneMeta.scene}
+            </div>
+          )}
+          {(sceneMeta.location || sceneMeta.mood) && (
+            <div className="text-white/40 text-[10px] md:text-xs tracking-[0.25em] uppercase font-serif mt-1 drop-shadow-md">
+              {[sceneMeta.location, sceneMeta.mood].filter(Boolean).join(' · ')}
+            </div>
+          )}
         </div>
       )}
 
