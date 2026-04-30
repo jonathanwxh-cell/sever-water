@@ -1,15 +1,13 @@
 interface TitleScreenProps {
   titleFade: boolean;
   hasSave: boolean;
-  onClick: () => void;
   onBeginAnew: () => void;
 }
 
-export default function TitleScreen({ titleFade, hasSave, onClick, onBeginAnew }: TitleScreenProps) {
+export default function TitleScreen({ titleFade, hasSave, onBeginAnew }: TitleScreenProps) {
   return (
     <div
-      className={`absolute inset-0 z-20 flex flex-col items-center justify-center cursor-pointer transition-opacity duration-2000 ${titleFade ? 'opacity-0' : 'opacity-100'}`}
-      onClick={onClick}
+      className={`absolute inset-0 z-20 flex flex-col items-center justify-center cursor-pointer transition-opacity duration-2000 pointer-events-none ${titleFade ? 'opacity-0' : 'opacity-100'}`}
     >
       <h1 className="text-6xl md:text-8xl font-serif text-white tracking-widest mb-6 drop-shadow-lg">断水</h1>
       <p className="text-xl md:text-2xl font-serif text-white/80 tracking-wide drop-shadow-md">SEVER WATER</p>
@@ -20,7 +18,7 @@ export default function TitleScreen({ titleFade, hasSave, onClick, onBeginAnew }
       {hasSave && (
         <button
           onClick={(e) => { e.stopPropagation(); onBeginAnew(); }}
-          className="mt-6 text-[10px] font-serif text-white/25 hover:text-white/50 tracking-[0.2em] uppercase underline-offset-4 hover:underline transition-colors"
+          className="pointer-events-auto mt-6 text-[10px] font-serif text-white/25 hover:text-white/50 tracking-[0.2em] uppercase underline-offset-4 hover:underline transition-colors"
         >
           Begin Anew
         </button>
