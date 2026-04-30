@@ -11,11 +11,11 @@ export default function AudioControls({ phase, volume, onVolumeChange, onReturnT
   const [showVolSlider, setShowVolSlider] = useState(false);
 
   return (
-    <div className="absolute top-4 right-4 z-50 flex items-center gap-1 safe-top">
+    <div className="absolute top-3 right-3 z-50 flex items-center gap-1 safe-top">
       {phase !== 'title' && onReturnToTitle && (
         <button
           onClick={(e) => { e.stopPropagation(); onReturnToTitle(); }}
-          className="text-white/50 hover:text-white/80 p-2"
+          className="min-h-11 min-w-11 flex items-center justify-center text-white/50 hover:text-white/80 active:text-white p-2 touch-manipulation"
           aria-label="Return to title"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -26,7 +26,7 @@ export default function AudioControls({ phase, volume, onVolumeChange, onReturnT
       <div className="relative">
         <button
           onClick={(e) => { e.stopPropagation(); setShowVolSlider(!showVolSlider); }}
-          className="text-white/50 hover:text-white/80 p-2"
+          className="min-h-11 min-w-11 flex items-center justify-center text-white/50 hover:text-white/80 active:text-white p-2 touch-manipulation"
           aria-label="Volume"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -43,7 +43,7 @@ export default function AudioControls({ phase, volume, onVolumeChange, onReturnT
               step="0.01"
               value={volume}
               onChange={(e) => onVolumeChange(parseFloat(e.target.value))}
-              className="w-24 accent-white/60"
+              className="w-28 accent-white/60"
             />
           </div>
         )}
