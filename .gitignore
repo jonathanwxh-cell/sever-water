@@ -6,4 +6,4 @@ dist/
 .DS_Store
 *.zip
 app-src-fixed/
-audio/
+public/assets/audio/
