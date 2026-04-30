@@ -135,7 +135,7 @@ function isValidSaveData(value: unknown): value is SaveData {
   );
 }
 
-export function loadProgress(): SaveData | null {
+export function readProgress(): SaveData | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
@@ -144,13 +144,23 @@ export function loadProgress(): SaveData | null {
       localStorage.removeItem(SAVE_KEY);
       return null;
     }
-    Object.assign(heartState, parsed.heartState);
-    Object.assign(flags, parsed.flags);
     return parsed;
   } catch {
     try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
     return null;
   }
+}
+
+export function restoreProgress(data: SaveData): void {
+  Object.assign(heartState, data.heartState);
+  Object.assign(flags, data.flags);
+}
+
+export function loadProgress(): SaveData | null {
+  const data = readProgress();
+  if (!data) return null;
+  restoreProgress(data);
+  return data;
 }
 
 export function clearProgress(): void {
