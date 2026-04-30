@@ -2,10 +2,11 @@
 // AUDIO ENGINE — Cue music management
 // ============================================================================
 const FADE_INTERVAL_MS = 50;
+const MUSIC_BASE_SCALE = 0.4;  // default music level relative to master volume; lower = quieter relative to narration
 
 export class CueEngine {
   cues: Record<number, HTMLAudioElement> = {};
-  cueScales: Record<number, number> = { 1: 1.0, 2: 1.0, 3: 1.0 };
+  cueScales: Record<number, number> = { 1: MUSIC_BASE_SCALE, 2: MUSIC_BASE_SCALE, 3: MUSIC_BASE_SCALE };
   activeCue = 0;
   masterVolume = 0.8;
   userInteracted = false;
@@ -27,7 +28,7 @@ export class CueEngine {
       2: makeCue('/assets/audio/cue2_one_line_sky_v0.mp3'),
       3: makeCue('/assets/audio/cue3_water_gazing_pavilion_v0.mp3'),
     };
-    this.cueScales = { 1: 1.0, 2: 1.0, 3: 1.0 };
+    this.cueScales = { 1: MUSIC_BASE_SCALE, 2: MUSIC_BASE_SCALE, 3: MUSIC_BASE_SCALE };
   }
 
   rebuild() {
@@ -60,12 +61,12 @@ export class CueEngine {
     if (!this.userInteracted) return;
     const audio = this.cues[cueNum];
     if (!audio) return;
-    this.cueScales[cueNum] = 1.0;
+    this.cueScales[cueNum] = MUSIC_BASE_SCALE;
     audio.currentTime = 0;
+    const target = this.masterVolume * this.cueScales[cueNum];
     if (fadeSec > 0) {
       audio.volume = 0;
       audio.play().catch(() => {});
-      const target = this.masterVolume;
       const start = Date.now();
       const t = setInterval(() => {
         const p = Math.min((Date.now() - start) / 1000 / fadeSec, 1);
@@ -74,7 +75,7 @@ export class CueEngine {
       }, FADE_INTERVAL_MS);
       this.addTimer(t);
     } else {
-      audio.volume = this.masterVolume;
+      audio.volume = target;
       audio.play().catch(() => {});
     }
     this.activeCue = cueNum;
@@ -103,7 +104,7 @@ export class CueEngine {
     if (audio) audio.volume = 0;
   }
 
-  fadeInCue(cueNum: number, durationSec = 3, targetScale = 0.6) {
+  fadeInCue(cueNum: number, durationSec = 3, targetScale = MUSIC_BASE_SCALE) {
     if (!this.userInteracted) return;
     const audio = this.cues[cueNum];
     if (!audio) return;
