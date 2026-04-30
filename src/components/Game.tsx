@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { gameNodes, type GameNode, type ChoiceOption } from '../data';
-import { applyChoice, resetState, saveProgress, loadProgress, clearProgress } from '../state';
+import {
+  applyChoice,
+  resetState,
+  saveProgress,
+  readProgress,
+  restoreProgress,
+  clearProgress,
+  type SaveData,
+} from '../state';
 import resolveCallbackNode from '../game/callback';
 import useAudioEngines from '../audio/useAudioEngines';
 import TitleScreen from "./TitleScreen";
@@ -14,40 +22,55 @@ import AdvanceAffordance from "./AdvanceAffordance";
 // ============================================================================
 // GAME COMPONENT
 // ============================================================================
-const TITLE_DELAY_MS = 2000;
-const CHOICE_ADVANCE_MS = 500;
-const BUSY_LOCK_MS = 400;
+const TITLE_DELAY_MS = 450;
+const CHOICE_ADVANCE_MS = 260;
+const BUSY_LOCK_MS = 260;
 
+type ImageWithFocalPoint = NonNullable<GameNode['image']> & {
+  focalPoint?: string;
+};
+
+type AdvanceOptions = {
+  replace?: boolean;
+};
+
+function getFocalPoint(image?: GameNode['image']): string {
+  return (image as ImageWithFocalPoint | undefined)?.focalPoint ?? 'center';
+}
+
+function isUsableSave(save: SaveData | null): save is SaveData {
+  return !!(save && save.currentNodeId !== 'title' && gameNodes[save.currentNodeId]);
+}
 
 export default function Game() {
+  const titleNode = gameNodes['title'];
+  const titleImagePosition = getFocalPoint(titleNode.image);
+
   const [nodes, setNodes] = useState<GameNode[]>([]);
   const [phase, setPhase] = useState<'title' | 'playing' | 'ended'>('title');
   const [titleFade, setTitleFade] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
   const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]);
   const [choicePrompt, setChoicePrompt] = useState('');
-  const [currentImg, setCurrentImg] = useState<string | null>(() => {
-    const t = gameNodes['title'];
-    return t.image ? t.image.src : null;
-  });
+  const [currentImg, setCurrentImg] = useState<string | null>(() => titleNode.image ? titleNode.image.src : null);
+  const [currentImgPosition, setCurrentImgPosition] = useState<string>(titleImagePosition);
   const [prevImg, setPrevImg] = useState<string | null>(null);
+  const [prevImgPosition, setPrevImgPosition] = useState<string>(titleImagePosition);
   const [prevImgFading, setPrevImgFading] = useState(false);
   const [narrationActive, setNarrationActive] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
-  const [hasSave, setHasSave] = useState(() => {
-    const save = loadProgress();
-    return !!(save && save.currentNodeId !== 'title');
-  });
+  const [hasSave, setHasSave] = useState(() => isUsableSave(readProgress()));
 
   const { cue: cueRef, narr: narrRef } = useAudioEngines();
   
-  const curNodeRef = useRef(((): string => {
-    const save = loadProgress();
-    return save && save.currentNodeId !== 'title' ? save.currentNodeId : 'title';
-  })());
+  const curNodeRef = useRef('title');
+  const currentImgRef = useRef<string | null>(currentImg);
+  const currentImgPositionRef = useRef<string>(currentImgPosition);
   const advancingRef = useRef(false);
   const choiceLockedRef = useRef(false);
+  const choiceResolvingRef = useRef(false);
+  const titleStartingRef = useRef(false);
 
   // VOLUME
   useEffect(() => {
@@ -64,15 +87,27 @@ export default function Game() {
   /* eslint-enable react-hooks/exhaustive-deps */
 
   // IMAGE
-  const setImage = useCallback((src?: string) => {
+  const setImage = useCallback((src?: string, duration = 1, focalPoint = 'center') => {
     if (!src) return;
-    setCurrentImg((latest) => {
-      if (latest === src) return latest;
-      setPrevImg(latest);
-      return src;
-    });
+
+    const previousImage = currentImgRef.current;
+    const previousPosition = currentImgPositionRef.current;
+
+    if (previousImage === src) {
+      currentImgPositionRef.current = focalPoint;
+      setCurrentImgPosition(focalPoint);
+      return;
+    }
+
+    setPrevImg(previousImage);
+    setPrevImgPosition(previousPosition);
+    currentImgRef.current = src;
+    currentImgPositionRef.current = focalPoint;
+    setCurrentImg(src);
+    setCurrentImgPosition(focalPoint);
+
     requestAnimationFrame(() => setPrevImgFading(true));
-    setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, 1000);
+    setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, duration * 1000);
   }, []);
 
   // AUDIO TRIGGERS
@@ -90,7 +125,7 @@ export default function Game() {
   }, []);
 
   // ADVANCE
-  const advance = useCallback((nodeId: string) => {
+  const advance = useCallback((nodeId: string, options: AdvanceOptions = {}) => {
     if (advancingRef.current) return;
     const node = gameNodes[nodeId];
     if (!node) return;
@@ -106,14 +141,14 @@ export default function Game() {
       }));
     }
 
-    if (node.type === 'scene-heading' || node.type === 'title') {
+    if (node.type === 'scene-heading' || node.type === 'title' || node.type === 'ending') {
       saveProgress(nodeId);
     }
 
     if (node.type === 'ending') setPhase('ended');
     else if (node.type !== 'title') setPhase('playing');
 
-    if (node.image) setImage(node.image.src);
+    if (node.image) setImage(node.image.src, node.image.duration ?? 1, getFocalPoint(node.image));
     handleAudio(node);
 
     narrRef.stop();
@@ -130,7 +165,11 @@ export default function Game() {
       setChoiceOptions(node.choices || []);
       setShowChoices(true);
     } else {
-      setNodes((prev) => [...prev, node]);
+      setNodes((prev) => {
+        if (options.replace) return [node];
+        if (prev[prev.length - 1]?.id === node.id) return prev;
+        return [...prev, node];
+      });
       setShowChoices(false);
       setChoiceOptions([]);
     }
@@ -139,57 +178,89 @@ export default function Game() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleAudio, setImage, volume]);
 
+  // TITLE START / RESUME
+  const beginFromTitle = useCallback((mode: 'resume' | 'restart' = 'resume') => {
+    if (titleStartingRef.current) return;
+    titleStartingRef.current = true;
+
+    if (!cueRef.userInteracted) cueRef.markInteracted();
+    narrRef.stop();
+    advancingRef.current = false;
+    choiceLockedRef.current = false;
+    choiceResolvingRef.current = false;
+
+    let targetNodeId = 'scene1_heading';
+
+    if (mode === 'restart') {
+      resetState();
+      clearProgress();
+      setHasSave(false);
+    } else {
+      const save = readProgress();
+      if (isUsableSave(save)) {
+        restoreProgress(save);
+        targetNodeId = save.currentNodeId;
+      } else {
+        resetState();
+        clearProgress();
+        setHasSave(false);
+      }
+    }
+
+    setNodes([]);
+    setSceneMeta({});
+    setShowChoices(false);
+    setChoiceOptions([]);
+    setChoicePrompt('');
+    setNarrationActive(false);
+    setTitleFade(true);
+
+    if (cueRef.activeCue !== 1) {
+      cueRef.playCue(1, 2);
+    }
+
+    setTimeout(() => {
+      setPhase('playing');
+      advance(targetNodeId, { replace: true });
+      titleStartingRef.current = false;
+    }, TITLE_DELAY_MS);
+  }, [advance, cueRef, narrRef]);
+
   // CLICK
   const handleClick = useCallback(() => {
+    if (choiceResolvingRef.current) return;
     if (!cueRef.userInteracted) cueRef.markInteracted();
+
+    if (phase === 'title') {
+      beginFromTitle('resume');
+      return;
+    }
 
     if (narrationActive && phase === 'playing') {
       narrRef.stop();
       setNarrationActive(false);
-      const node = gameNodes[curNodeRef.current];
-      if (node?.next) {
-        advancingRef.current = false;
-        advance(node.next);
-      }
       return;
     }
 
     if (showChoices || phase === 'ended') return;
 
-    if (phase === 'title') {
-      if (!titleFade) {
-        setTitleFade(true);
-        if (cueRef.activeCue !== 1) {
-          cueRef.playCue(1, 2);
-        }
-        setTimeout(() => {
-          setPhase('playing');
-          if (hasSave && curNodeRef.current !== 'title') {
-            advance(curNodeRef.current);
-          } else {
-            advance('scene1_heading');
-          }
-        }, TITLE_DELAY_MS);
-      }
-      return;
-    }
-
     const node = gameNodes[curNodeRef.current];
     if (!node?.next) return;
     advance(node.next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, titleFade, showChoices, narrationActive, advance, hasSave]);
+  }, [phase, showChoices, narrationActive, advance, beginFromTitle]);
 
   // CHOICE
   const handleChoice = useCallback((choiceId: string) => {
-    if (choiceLockedRef.current) return;
+    if (choiceLockedRef.current || choiceResolvingRef.current) return;
     choiceLockedRef.current = true;
+    choiceResolvingRef.current = true;
 
     applyChoice(choiceId);
 
     const choice = choiceOptions.find((c) => c.id === choiceId);
     if (choice) {
-      setNodes((prev) => [...prev, { id: `choice_${choiceId}`, text: choice.outcome, type: 'narration' as const }]);
+      setNodes([{ id: `choice_${choiceId}`, text: choice.outcome, type: 'narration' as const }]);
     }
 
     setShowChoices(false);
@@ -203,6 +274,7 @@ export default function Game() {
 
     setTimeout(() => {
       choiceLockedRef.current = false;
+      choiceResolvingRef.current = false;
       advance(resolvedNextId);
     }, CHOICE_ADVANCE_MS);
   }, [choiceOptions, advance]);
@@ -220,15 +292,28 @@ export default function Game() {
     setChoiceOptions([]);
     setChoicePrompt('');
     setCurrentImg(null);
+    currentImgRef.current = null;
+    setCurrentImgPosition('center');
+    currentImgPositionRef.current = 'center';
     setPrevImg(null);
+    setPrevImgPosition('center');
     setPrevImgFading(false);
     setNarrationActive(false);
     setSceneMeta({});
+    setHasSave(false);
     curNodeRef.current = 'title';
     advancingRef.current = false;
     choiceLockedRef.current = false;
+    choiceResolvingRef.current = false;
+    titleStartingRef.current = false;
     const t = gameNodes['title'];
-    if (t.image) setCurrentImg(t.image.src);
+    if (t.image) {
+      const pos = getFocalPoint(t.image);
+      currentImgRef.current = t.image.src;
+      currentImgPositionRef.current = pos;
+      setCurrentImg(t.image.src);
+      setCurrentImgPosition(pos);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -246,6 +331,7 @@ export default function Game() {
       cueRef.playCue(1, 2);
     }
 
+    setNodes([]);
     setPhase('title');
     setTitleFade(false);
     setShowChoices(false);
@@ -255,26 +341,22 @@ export default function Game() {
 
     const t = gameNodes['title'];
     if (t.image) {
-      setPrevImg(currentImg);
-      setCurrentImg(t.image.src);
-      requestAnimationFrame(() => setPrevImgFading(true));
-      setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, 1000);
+      setImage(t.image.src, t.image.duration ?? 1, getFocalPoint(t.image));
     }
 
     curNodeRef.current = 'title';
     advancingRef.current = false;
     choiceLockedRef.current = false;
-    setHasSave(true);
+    choiceResolvingRef.current = false;
+    titleStartingRef.current = false;
+    setHasSave(isUsableSave(readProgress()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentImg]);
+  }, [setImage]);
 
   // BEGIN ANEW (from title screen)
   const handleBeginAnew = useCallback(() => {
-    resetState();
-    clearProgress();
-    setHasSave(false);
-    curNodeRef.current = 'title';
-  }, []);
+    beginFromTitle('restart');
+  }, [beginFromTitle]);
 
   // KEYBOARD
   useEffect(() => {
@@ -290,8 +372,8 @@ export default function Game() {
     <div className="relative w-full h-screen-dynamic overflow-hidden bg-black select-none safe-bottom safe-top" onClick={handleClick}>
       {/* IMAGES */}
       <div className="absolute top-0 left-0 w-full h-[55%] md:h-[65%] overflow-hidden">
-        {prevImg && <div className="absolute inset-0 bg-cover bg-center transition-opacity duration-1000" style={{ backgroundImage: `url(${prevImg})`, opacity: prevImgFading ? 0 : 1 }} />}
-        {currentImg && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${currentImg})` }} />}
+        {prevImg && <div className="scene-image absolute inset-0 bg-cover transition-opacity duration-1000" style={{ backgroundImage: `url(${prevImg})`, backgroundPosition: prevImgPosition, opacity: prevImgFading ? 0 : 1 }} />}
+        {currentImg && <div className="scene-image absolute inset-0 bg-cover" style={{ backgroundImage: `url(${currentImg})`, backgroundPosition: currentImgPosition }} />}
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
       </div>
 
@@ -300,7 +382,7 @@ export default function Game() {
         <TitleScreen
           titleFade={titleFade}
           hasSave={hasSave}
-          onClick={handleClick}
+          onStart={() => beginFromTitle('resume')}
           onBeginAnew={handleBeginAnew}
         />
       )}
@@ -310,7 +392,7 @@ export default function Game() {
 
       {/* TEXT PANEL */}
       {phase !== 'title' && !showChoices && (
-        <TextPanel nodes={nodes} onClick={handleClick} onRestart={handleRestart} />
+        <TextPanel nodes={nodes} onRestart={handleRestart} />
       )}
 
       {/* CHOICE OVERLAY */}
