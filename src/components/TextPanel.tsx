@@ -29,7 +29,7 @@ function renderNode(node: GameNode, onRestart?: () => void) {
           <h2 className="text-3xl md:text-4xl font-serif text-white tracking-widest">{node.text}</h2>
           <p className="text-white/50 mt-4 font-serif">To be continued...</p>
           {onRestart && (
-            <button onClick={(e) => { e.stopPropagation(); onRestart(); }} className="pointer-events-auto mt-6 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-sm transition-colors">
+            <button onClick={(e) => { e.stopPropagation(); onRestart(); }} className="mt-6 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-sm transition-colors">
               <span className="text-white/90 font-serif text-base">Play Again</span>
             </button>
           )}
@@ -48,7 +48,7 @@ export default function TextPanel({ nodes, onRestart }: TextPanelProps) {
   }, [nodes]);
 
   return (
-    <div className="absolute bottom-0 left-0 w-full h-[45%] md:h-[35%] flex flex-col bg-gradient-to-t from-black via-black/95 via-65% to-transparent pointer-events-none">
+    <div className="absolute bottom-0 left-0 w-full h-[45%] md:h-[35%] flex flex-col bg-gradient-to-t from-black via-black/95 via-65% to-transparent">
       <div className="flex-1 overflow-y-auto px-6 pt-12 pb-20 md:pb-12">
         <div className="max-w-3xl mx-auto">
           {nodes.slice(-VISIBLE_NODE_LIMIT).map((node) => renderNode(node, onRestart))}
