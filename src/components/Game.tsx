@@ -119,7 +119,7 @@ export default function Game() {
       case 'play': e.playCue(cue, duration || 0); break;
       case 'fade-out': e.fadeOutCue(cue, duration || 2); break;
       case 'hard-mute': e.hardMute(cue); break;
-      case 'fade-in': e.fadeInCue(cue, duration || 3, vol || 0.6); break;
+      case 'fade-in': e.fadeInCue(cue, duration || 3, vol); break;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

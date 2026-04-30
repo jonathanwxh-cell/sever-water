@@ -230,7 +230,7 @@ export const gameNodes: Record<string, GameNode> = {
     text: 'The woman who rises is slight. Travelling clothes the colour of old leaves. She sheathes her sword without ceremony — a breach of form that tells you she was not trained in any orthodox school. Then she sways, catches herself against the gorge wall, and her left hand comes away red.',
     type: 'narration',
     narrationAudio: NAR.s2_liu,
-    audio: { action: 'fade-in', cue: 2, duration: 3, volume: 0.6 },
+    audio: { action: 'fade-in', cue: 2, duration: 3, volume: 0.4 },
     next: 's2_she_turns',
   },
 
