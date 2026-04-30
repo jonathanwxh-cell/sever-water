@@ -34,4 +34,27 @@
   .duration-2000 {
     transition-duration: 2000ms;
   }
+
+  .scene-image {
+    animation: slow-drift 18s ease-in-out infinite alternate;
+    transform-origin: center;
+    will-change: transform;
+  }
+}
+
+@keyframes slow-drift {
+  from {
+    transform: scale(1.03) translateY(0);
+  }
+
+  to {
+    transform: scale(1.08) translateY(-1.5%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-image {
+    animation: none;
+    transform: none;
+  }
 }
