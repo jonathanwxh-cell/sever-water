@@ -18,10 +18,17 @@ const TITLE_DELAY_MS = 2000;
 const CHOICE_ADVANCE_MS = 500;
 const BUSY_LOCK_MS = 400;
 
+type ImageWithFocalPoint = NonNullable<GameNode['image']> & {
+  focalPoint?: string;
+};
+
+function getFocalPoint(image?: GameNode['image']): string {
+  return (image as ImageWithFocalPoint | undefined)?.focalPoint ?? 'center';
+}
 
 export default function Game() {
   const titleNode = gameNodes['title'];
-  const titleImagePosition = titleNode.image?.focalPoint ?? 'center';
+  const titleImagePosition = getFocalPoint(titleNode.image);
 
   const [nodes, setNodes] = useState<GameNode[]>([]);
   const [phase, setPhase] = useState<'title' | 'playing' | 'ended'>('title');
@@ -130,7 +137,7 @@ export default function Game() {
     if (node.type === 'ending') setPhase('ended');
     else if (node.type !== 'title') setPhase('playing');
 
-    if (node.image) setImage(node.image.src, node.image.duration ?? 1, node.image.focalPoint ?? 'center');
+    if (node.image) setImage(node.image.src, node.image.duration ?? 1, getFocalPoint(node.image));
     handleAudio(node);
 
     narrRef.stop();
@@ -252,7 +259,7 @@ export default function Game() {
     choiceResolvingRef.current = false;
     const t = gameNodes['title'];
     if (t.image) {
-      const pos = t.image.focalPoint ?? 'center';
+      const pos = getFocalPoint(t.image);
       currentImgRef.current = t.image.src;
       currentImgPositionRef.current = pos;
       setCurrentImg(t.image.src);
@@ -284,7 +291,7 @@ export default function Game() {
 
     const t = gameNodes['title'];
     if (t.image) {
-      setImage(t.image.src, t.image.duration ?? 1, t.image.focalPoint ?? 'center');
+      setImage(t.image.src, t.image.duration ?? 1, getFocalPoint(t.image));
     }
 
     curNodeRef.current = 'title';
