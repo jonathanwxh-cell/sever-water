@@ -1,16 +1,20 @@
 // ============================================================================
 // AUDIO ENGINE — Cue music management
 // ============================================================================
+import { CUE_PATHS } from './cues';
+
 const FADE_INTERVAL_MS = 50;
 const MUSIC_BASE_SCALE = 0.4;  // default music level relative to master volume; lower = quieter relative to narration
 
 export class CueEngine {
   cues: Record<number, HTMLAudioElement> = {};
-  cueScales: Record<number, number> = { 1: MUSIC_BASE_SCALE, 2: MUSIC_BASE_SCALE, 3: MUSIC_BASE_SCALE };
+  cueScales: Record<number, number> = {};
+  // Per-cue active fade interval. Starting a new fade on a cue cancels the previous one
+  // so two fades can't race against the same audio.volume property.
+  private fadeTimers: Record<number, ReturnType<typeof setInterval>> = {};
   activeCue = 0;
   masterVolume = 0.8;
   userInteracted = false;
-  timers: ReturnType<typeof setInterval>[] = [];
 
   constructor() {
     this.buildCues();
@@ -23,12 +27,13 @@ export class CueEngine {
       a.volume = 0;
       return a;
     };
-    this.cues = {
-      1: makeCue('/assets/audio/cue1_mountain_gate_v0.mp3'),
-      2: makeCue('/assets/audio/cue2_one_line_sky_v0.mp3'),
-      3: makeCue('/assets/audio/cue3_water_gazing_pavilion_v0.mp3'),
-    };
-    this.cueScales = { 1: MUSIC_BASE_SCALE, 2: MUSIC_BASE_SCALE, 3: MUSIC_BASE_SCALE };
+    this.cues = {};
+    this.cueScales = {};
+    for (const [numStr, path] of Object.entries(CUE_PATHS)) {
+      const num = Number(numStr);
+      this.cues[num] = makeCue(path);
+      this.cueScales[num] = MUSIC_BASE_SCALE;
+    }
   }
 
   rebuild() {
@@ -40,17 +45,28 @@ export class CueEngine {
     this.buildCues();
   }
 
-  private addTimer(t: ReturnType<typeof setInterval>) {
-    this.timers.push(t);
+  private cancelFade(cueNum: number) {
+    const t = this.fadeTimers[cueNum];
+    if (t !== undefined) {
+      clearInterval(t);
+      delete this.fadeTimers[cueNum];
+    }
   }
 
-  private removeTimer(t: ReturnType<typeof setInterval>) {
-    this.timers = this.timers.filter((x) => x !== t);
+  private startFade(cueNum: number, tick: () => boolean) {
+    this.cancelFade(cueNum);
+    const t = setInterval(() => {
+      if (tick()) {
+        clearInterval(t);
+        if (this.fadeTimers[cueNum] === t) delete this.fadeTimers[cueNum];
+      }
+    }, FADE_INTERVAL_MS);
+    this.fadeTimers[cueNum] = t;
   }
 
   clearTimers() {
-    this.timers.forEach((t) => clearInterval(t));
-    this.timers = [];
+    Object.values(this.fadeTimers).forEach((t) => clearInterval(t));
+    this.fadeTimers = {};
   }
 
   markInteracted() {
@@ -62,18 +78,18 @@ export class CueEngine {
     const audio = this.cues[cueNum];
     if (!audio) return;
     this.cueScales[cueNum] = MUSIC_BASE_SCALE;
+    this.cancelFade(cueNum);
     audio.currentTime = 0;
     const target = this.masterVolume * this.cueScales[cueNum];
     if (fadeSec > 0) {
       audio.volume = 0;
       audio.play().catch(() => {});
       const start = Date.now();
-      const t = setInterval(() => {
+      this.startFade(cueNum, () => {
         const p = Math.min((Date.now() - start) / 1000 / fadeSec, 1);
         audio.volume = target * p;
-        if (p >= 1) { clearInterval(t); this.removeTimer(t); }
-      }, FADE_INTERVAL_MS);
-      this.addTimer(t);
+        return p >= 1;
+      });
     } else {
       audio.volume = target;
       audio.play().catch(() => {});
@@ -86,22 +102,24 @@ export class CueEngine {
     if (!audio) return;
     const startVol = audio.volume;
     const start = Date.now();
-    const t = setInterval(() => {
+    this.startFade(cueNum, () => {
       const p = Math.min((Date.now() - start) / 1000 / durationSec, 1);
       audio.volume = startVol * (1 - p);
       if (p >= 1) {
         audio.pause();
-        clearInterval(t);
-        this.removeTimer(t);
+        return true;
       }
-    }, FADE_INTERVAL_MS);
-    this.addTimer(t);
+      return false;
+    });
     if (this.activeCue === cueNum) this.activeCue = 0;
   }
 
   hardMute(cueNum: number) {
     const audio = this.cues[cueNum];
-    if (audio) audio.volume = 0;
+    if (audio) {
+      this.cancelFade(cueNum);
+      audio.volume = 0;
+    }
   }
 
   fadeInCue(cueNum: number, durationSec = 3, targetScale = MUSIC_BASE_SCALE) {
@@ -110,19 +128,19 @@ export class CueEngine {
     if (!audio) return;
     this.cueScales[cueNum] = targetScale;
     const target = this.masterVolume * targetScale;
-    if (!audio.paused && audio.volume > 0.01) return;
+    // Already at target and no fade in flight — nothing to do.
+    if (!audio.paused && audio.volume > 0.01 && this.fadeTimers[cueNum] === undefined) return;
     if (audio.paused) {
       audio.currentTime = 0;
       audio.play().catch(() => {});
     }
     const startVol = audio.volume;
     const start = Date.now();
-    const t = setInterval(() => {
+    this.startFade(cueNum, () => {
       const p = Math.min((Date.now() - start) / 1000 / durationSec, 1);
       audio.volume = startVol + (target - startVol) * p;
-      if (p >= 1) { clearInterval(t); this.removeTimer(t); }
-    }, FADE_INTERVAL_MS);
-    this.addTimer(t);
+      return p >= 1;
+    });
     this.activeCue = cueNum;
   }
 
