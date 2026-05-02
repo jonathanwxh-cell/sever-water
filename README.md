@@ -1,8 +1,21 @@
 # 断水 · Sever Water
 
+[![CI](https://github.com/jonathanwxh-cell/sever-water/actions/workflows/ci.yml/badge.svg)](https://github.com/jonathanwxh-cell/sever-water/actions/workflows/ci.yml)
+[![Status: Act 1 complete](https://img.shields.io/badge/status-Act%201%20complete%20%C2%B7%20Act%202%20WIP-blue)](#status)
+[![License: Proprietary](https://img.shields.io/badge/license-proprietary-lightgrey)](LICENSE)
+
 A cinematic interactive fiction game set in a wuxia world. Built with React, TypeScript, and Tailwind CSS.
 
 Act 1 follows **Shen Mo of Cold Mountain** — a young swordsman carrying a sealed letter through a rain-soaked gorge, where three hired knives are waiting. Every choice reshapes the story's emotional landscape through a hidden four-pole heart state system.
+
+## Demo
+
+<!-- Replace with the live Vercel URL once available -->
+**Live:** _coming soon_ — deploy URL pending.
+
+<!-- Add a gameplay screenshot or animated GIF here:
+     ![Sever Water — Act 1 opening](docs/screenshot-opening.png)
+     Recommended: 1280×720 PNG of the title screen + one mid-scene moment. -->
 
 ## Architecture
 
@@ -84,8 +97,12 @@ See `src/data.ts` for the full asset map.
 
 ## Status
 
-**Act 1 complete.** Act 2 in development.
+**Act 1 complete.** Act 2 in development. See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## Contributing
+
+This is a private project; external contributions are not currently accepted. If you're working on this codebase, see the [pull request template](.github/PULL_REQUEST_TEMPLATE.md) and ensure `npm run lint`, `npm test`, and `npm run build` all pass before opening a PR.
 
 ## License
 
-Private project. All rights reserved.
+Proprietary — all rights reserved. See [LICENSE](LICENSE).
