@@ -10,8 +10,7 @@ Act 1 follows **Shen Mo of Cold Mountain** — a young swordsman carrying a seal
 
 ## Demo
 
-<!-- Replace with the live Vercel URL once available -->
-**Live:** _coming soon_ — deploy URL pending.
+**Play it:** **[wuxia.alyoechosys.dev](https://wuxia.alyoechosys.dev/)**
 
 <!-- Add a gameplay screenshot or animated GIF here:
      ![Sever Water — Act 1 opening](docs/screenshot-opening.png)
