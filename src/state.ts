@@ -2,8 +2,8 @@
  * State Logic Agent Implementation
  * Sever Water (断水) — Act 1 State Machine
  *
- * Implements Section 5 of the Kimi Swarm Brief verbatim.
- * DO NOT modify field names, do not add state variables.
+ * Implements Section 5 of the Kimi Swarm Brief.
+ * Field names are part of the contract — do not rename.
  */
 
 export interface HeartState {
@@ -33,27 +33,23 @@ export interface StateSnapshot {
 const INITIAL_HEART: HeartState = { cheng: 0, yuan: 0, huo: 0, leng: 0 };
 const INITIAL_FLAGS: Flags = { A1: false, B1: false, C1: false, A2: false, B2: false, C2: false, A3: false, B3: false, C3: false };
 
-export const heartState: HeartState = { ...INITIAL_HEART };
-export const flags: Flags = { ...INITIAL_FLAGS };
+// Module-private — read via getStateSnapshot, mutate via applyChoice/resetState/restoreProgress.
+const heartState: HeartState = { ...INITIAL_HEART };
+const flags: Flags = { ...INITIAL_FLAGS };
 
 export function applyChoice(choiceId: string): void {
-  const effects: Record<string, () => void> = {
-    "1A": () => { heartState.leng += 1; flags.A1 = true; },
-    "1B": () => { heartState.cheng += 1; flags.B1 = true; },
-    "1C": () => { heartState.huo += 1; flags.C1 = true; },
-    "2A": () => { heartState.cheng += 1; flags.A2 = true; },
-    "2B": () => { heartState.huo += 1; flags.B2 = true; },
-    "2C": () => { heartState.leng += 1; flags.C2 = true; },
-    "3A": () => { heartState.yuan += 1; flags.A3 = true; },
-    "3B": () => { heartState.cheng += 1; flags.B3 = true; },
-    "3C": () => { heartState.huo += 1; flags.C3 = true; },
-  };
-
-  if (!effects[choiceId]) {
-    throw new Error(`Invalid choice ID: ${choiceId}`);
+  switch (choiceId) {
+    case "1A": heartState.leng += 1; flags.A1 = true; return;
+    case "1B": heartState.cheng += 1; flags.B1 = true; return;
+    case "1C": heartState.huo += 1; flags.C1 = true; return;
+    case "2A": heartState.cheng += 1; flags.A2 = true; return;
+    case "2B": heartState.huo += 1; flags.B2 = true; return;
+    case "2C": heartState.leng += 1; flags.C2 = true; return;
+    case "3A": heartState.yuan += 1; flags.A3 = true; return;
+    case "3B": heartState.cheng += 1; flags.B3 = true; return;
+    case "3C": heartState.huo += 1; flags.C3 = true; return;
+    default: throw new Error(`Invalid choice ID: ${choiceId}`);
   }
-
-  effects[choiceId]();
 }
 
 export function resetState(): void {
@@ -88,8 +84,10 @@ export function shouldRenderTooManyQuestions(): boolean {
 // Persistence — autosave at scene boundaries
 // ============================================================================
 const SAVE_KEY = 'sever_water_act1_save';
+const SAVE_VERSION = 1;
 
 export interface SaveData {
+  version: number;
   heartState: HeartState;
   flags: Flags;
   currentNodeId: string;
@@ -99,6 +97,7 @@ export interface SaveData {
 export function saveProgress(currentNodeId: string): void {
   try {
     const data: SaveData = {
+      version: SAVE_VERSION,
       heartState: { ...heartState },
       flags: { ...flags },
       currentNodeId,
@@ -113,6 +112,7 @@ export function saveProgress(currentNodeId: string): void {
 function isValidSaveData(value: unknown): value is SaveData {
   if (!value || typeof value !== 'object') return false;
   const data = value as Partial<SaveData>;
+  if (data.version !== SAVE_VERSION) return false;
   if (typeof data.currentNodeId !== 'string') return false;
   if (typeof data.timestamp !== 'number') return false;
   if (!data.heartState || !data.flags) return false;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useReducer, useRef, useCallback, useState } from 'react';
 import { gameNodes, type GameNode, type ChoiceOption } from '../data';
 import {
   applyChoice,
@@ -24,7 +24,8 @@ import AdvanceAffordance from "./AdvanceAffordance";
 // ============================================================================
 const TITLE_DELAY_MS = 450;
 const CHOICE_ADVANCE_MS = 260;
-const BUSY_LOCK_MS = 260;
+const SHORT_LOCK_MS = 150;     // baseline click-debounce when no visual transition
+const LOCK_BUFFER_MS = 50;     // small grace period after image fade completes
 
 type ImageWithFocalPoint = NonNullable<GameNode['image']> & {
   focalPoint?: string;
@@ -42,32 +43,73 @@ function isUsableSave(save: SaveData | null): save is SaveData {
   return !!(save && save.currentNodeId !== 'title' && gameNodes[save.currentNodeId]);
 }
 
-export default function Game() {
-  const titleNode = gameNodes['title'];
-  const titleImagePosition = getFocalPoint(titleNode.image);
+// ============================================================================
+// Image state — owns crossfade. Reducer reads previous state synchronously,
+// so no parallel ref is needed to mirror current image src/position.
+// ============================================================================
+type ImageState = {
+  current: { src: string | null; position: string };
+  prev: { src: string | null; position: string; fading: boolean };
+};
 
+type ImageAction =
+  | { type: 'set'; src: string; position: string }       // crossfade to new image
+  | { type: 'reposition'; position: string }              // same src, change focal point
+  | { type: 'start-fade' }                                // begin prev-fade animation
+  | { type: 'clear-prev' }                                // remove prev after fade
+  | { type: 'force'; src: string | null; position: string }; // hard reset, no crossfade
+
+function imageReducer(state: ImageState, action: ImageAction): ImageState {
+  switch (action.type) {
+    case 'set':
+      if (state.current.src === action.src) {
+        return { ...state, current: { src: action.src, position: action.position } };
+      }
+      return {
+        current: { src: action.src, position: action.position },
+        prev: { src: state.current.src, position: state.current.position, fading: false },
+      };
+    case 'reposition':
+      return { ...state, current: { ...state.current, position: action.position } };
+    case 'start-fade':
+      return { ...state, prev: { ...state.prev, fading: true } };
+    case 'clear-prev':
+      return { ...state, prev: { src: null, position: state.prev.position, fading: false } };
+    case 'force':
+      return {
+        current: { src: action.src, position: action.position },
+        prev: { src: null, position: action.position, fading: false },
+      };
+  }
+}
+
+function initialImageState(): ImageState {
+  const titleNode = gameNodes['title'];
+  const pos = getFocalPoint(titleNode.image);
+  return {
+    current: { src: titleNode.image?.src ?? null, position: pos },
+    prev: { src: null, position: pos, fading: false },
+  };
+}
+
+export default function Game() {
   const [nodes, setNodes] = useState<GameNode[]>([]);
   const [phase, setPhase] = useState<'title' | 'playing' | 'ended'>('title');
   const [titleFade, setTitleFade] = useState(false);
   const [showChoices, setShowChoices] = useState(false);
   const [choiceOptions, setChoiceOptions] = useState<ChoiceOption[]>([]);
   const [choicePrompt, setChoicePrompt] = useState('');
-  const [currentImg, setCurrentImg] = useState<string | null>(() => titleNode.image ? titleNode.image.src : null);
-  const [currentImgPosition, setCurrentImgPosition] = useState<string>(titleImagePosition);
-  const [prevImg, setPrevImg] = useState<string | null>(null);
-  const [prevImgPosition, setPrevImgPosition] = useState<string>(titleImagePosition);
-  const [prevImgFading, setPrevImgFading] = useState(false);
+  const [image, dispatchImage] = useReducer(imageReducer, undefined, initialImageState);
   const [narrationActive, setNarrationActive] = useState(false);
   const [volume, setVolume] = useState(0.8);
   const [sceneMeta, setSceneMeta] = useState<{ scene?: string; location?: string; mood?: string }>({});
   const [hasSave, setHasSave] = useState(() => isUsableSave(readProgress()));
 
   const { cue: cueRef, narr: narrRef } = useAudioEngines();
-  
+
   const curNodeRef = useRef('title');
-  const currentImgRef = useRef<string | null>(currentImg);
-  const currentImgPositionRef = useRef<string>(currentImgPosition);
   const advancingRef = useRef(false);
+  const advanceUnlockRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const choiceLockedRef = useRef(false);
   const choiceResolvingRef = useRef(false);
   const titleStartingRef = useRef(false);
@@ -82,32 +124,20 @@ export default function Game() {
   // CLEANUP
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
-    return () => { cueRef.stopAll(); narrRef.stop(); };
+    return () => {
+      cueRef.stopAll();
+      narrRef.stop();
+      if (advanceUnlockRef.current) clearTimeout(advanceUnlockRef.current);
+    };
   }, []);
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  // IMAGE
+  // IMAGE — crossfade orchestration
   const setImage = useCallback((src?: string, duration = 1, focalPoint = 'center') => {
     if (!src) return;
-
-    const previousImage = currentImgRef.current;
-    const previousPosition = currentImgPositionRef.current;
-
-    if (previousImage === src) {
-      currentImgPositionRef.current = focalPoint;
-      setCurrentImgPosition(focalPoint);
-      return;
-    }
-
-    setPrevImg(previousImage);
-    setPrevImgPosition(previousPosition);
-    currentImgRef.current = src;
-    currentImgPositionRef.current = focalPoint;
-    setCurrentImg(src);
-    setCurrentImgPosition(focalPoint);
-
-    requestAnimationFrame(() => setPrevImgFading(true));
-    setTimeout(() => { setPrevImg(null); setPrevImgFading(false); }, duration * 1000);
+    dispatchImage({ type: 'set', src, position: focalPoint });
+    requestAnimationFrame(() => dispatchImage({ type: 'start-fade' }));
+    setTimeout(() => dispatchImage({ type: 'clear-prev' }), duration * 1000);
   }, []);
 
   // AUDIO TRIGGERS
@@ -124,7 +154,9 @@ export default function Game() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ADVANCE
+  // ADVANCE — lock duration is derived from the node's actual transition,
+  // not a fixed timer. Image-bearing nodes lock for the full fade; plain
+  // text nodes use a short click-debounce only.
   const advance = useCallback((nodeId: string, options: AdvanceOptions = {}) => {
     if (advancingRef.current) return;
     const node = gameNodes[nodeId];
@@ -148,7 +180,12 @@ export default function Game() {
     if (node.type === 'ending') setPhase('ended');
     else if (node.type !== 'title') setPhase('playing');
 
-    if (node.image) setImage(node.image.src, node.image.duration ?? 1, getFocalPoint(node.image));
+    let lockMs = SHORT_LOCK_MS;
+    if (node.image) {
+      const dur = node.image.duration ?? 1;
+      setImage(node.image.src, dur, getFocalPoint(node.image));
+      lockMs = Math.max(SHORT_LOCK_MS, dur * 1000 + LOCK_BUFFER_MS);
+    }
     handleAudio(node);
 
     narrRef.stop();
@@ -174,7 +211,11 @@ export default function Game() {
       setChoiceOptions([]);
     }
 
-    setTimeout(() => { advancingRef.current = false; }, BUSY_LOCK_MS);
+    if (advanceUnlockRef.current) clearTimeout(advanceUnlockRef.current);
+    advanceUnlockRef.current = setTimeout(() => {
+      advancingRef.current = false;
+      advanceUnlockRef.current = null;
+    }, lockMs);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handleAudio, setImage, volume]);
 
@@ -285,19 +326,16 @@ export default function Game() {
     clearProgress();
     cueRef.rebuild();
     narrRef.stop();
+    if (advanceUnlockRef.current) {
+      clearTimeout(advanceUnlockRef.current);
+      advanceUnlockRef.current = null;
+    }
     setNodes([]);
     setPhase('title');
     setTitleFade(false);
     setShowChoices(false);
     setChoiceOptions([]);
     setChoicePrompt('');
-    setCurrentImg(null);
-    currentImgRef.current = null;
-    setCurrentImgPosition('center');
-    currentImgPositionRef.current = 'center';
-    setPrevImg(null);
-    setPrevImgPosition('center');
-    setPrevImgFading(false);
     setNarrationActive(false);
     setSceneMeta({});
     setHasSave(false);
@@ -307,13 +345,7 @@ export default function Game() {
     choiceResolvingRef.current = false;
     titleStartingRef.current = false;
     const t = gameNodes['title'];
-    if (t.image) {
-      const pos = getFocalPoint(t.image);
-      currentImgRef.current = t.image.src;
-      currentImgPositionRef.current = pos;
-      setCurrentImg(t.image.src);
-      setCurrentImgPosition(pos);
-    }
+    dispatchImage({ type: 'force', src: t.image?.src ?? null, position: getFocalPoint(t.image) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -346,6 +378,10 @@ export default function Game() {
 
     curNodeRef.current = 'title';
     advancingRef.current = false;
+    if (advanceUnlockRef.current) {
+      clearTimeout(advanceUnlockRef.current);
+      advanceUnlockRef.current = null;
+    }
     choiceLockedRef.current = false;
     choiceResolvingRef.current = false;
     titleStartingRef.current = false;
@@ -372,8 +408,8 @@ export default function Game() {
     <div className="relative w-full h-screen-dynamic overflow-hidden bg-black select-none safe-bottom safe-top" onClick={handleClick}>
       {/* IMAGES */}
       <div className="absolute top-0 left-0 w-full h-[55%] md:h-[65%] overflow-hidden">
-        {prevImg && <div className="scene-image absolute inset-0 bg-cover transition-opacity duration-1000" style={{ backgroundImage: `url(${prevImg})`, backgroundPosition: prevImgPosition, opacity: prevImgFading ? 0 : 1 }} />}
-        {currentImg && <div className="scene-image absolute inset-0 bg-cover" style={{ backgroundImage: `url(${currentImg})`, backgroundPosition: currentImgPosition }} />}
+        {image.prev.src && <div className="scene-image absolute inset-0 bg-cover transition-opacity duration-1000" style={{ backgroundImage: `url(${image.prev.src})`, backgroundPosition: image.prev.position, opacity: image.prev.fading ? 0 : 1 }} />}
+        {image.current.src && <div className="scene-image absolute inset-0 bg-cover" style={{ backgroundImage: `url(${image.current.src})`, backgroundPosition: image.current.position }} />}
         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
       </div>
 
